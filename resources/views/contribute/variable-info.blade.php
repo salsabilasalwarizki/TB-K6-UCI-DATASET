@@ -1,353 +1,328 @@
 @extends('layouts.app')
-@section('title', 'Dataset Donation - Variable Information - UCI Machine Learning Repository')
+@section('title', 'Dataset Donation - Variables - UCI Machine Learning Repository')
 
 @section('content')
 <div class="donation-page">
     <div class="container">
         <!-- Header -->
-        <div class="donation-header">
+        <div class="donation-header text-center mb-4">
             <h1 class="page-title">Dataset Donation Form</h1>
-            <p class="page-description">
-                We offer users the option to upload their dataset data to our repository.
-            </p>
-            <p class="page-description">
-                Users can provide tabular or non-tabular dataset data which will be made publicly available on our repository. 
-                Donators are free to edit their donated datasets, but edits must be approved before finalizing.
-            </p>
+            <p class="page-description">Page 6 of 7: Variable Information</p>
         </div>
 
         <!-- Progress Bar -->
-        <div class="progress-wrapper">
-            <div class="progress">
-                <div class="progress-bar bg-warning" style="width: 85%"></div>
+        <div class="progress-wrapper mb-4">
+            <div class="progress" style="height: 8px;">
+                <div class="progress-bar bg-warning" style="width: 85.5%"></div>
             </div>
-            <span class="progress-text">Page 6 / 7</span>
+            <span class="progress-text small text-muted">Page 6 / 7</span>
         </div>
 
         <!-- Form -->
-        <form action="{{ route('contribute.variable-info.store') }}" method="POST">
+        <form action="{{ route('contribute.variable-info.store') }}" method="POST" id="variablesForm">
             @csrf
+            
+            @if ($errors->any())
+            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <h6 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Form has errors:</h6>
+                <ul class="mb-0 small">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            @endif
 
-            <!-- Variable Information Section -->
+            <!-- Variables Section -->
             <div class="form-card">
-                <h5 class="card-section-title">Variable Information</h5>
-                
-                <!-- Class Labels -->
-                <div class="form-group mb-4">
-                    <label for="class_labels" class="form-label">
-                        Provide class labels for categorical data, if applicable.
-                    </label>
-                    <textarea 
-                        class="form-control" 
-                        id="class_labels" 
-                        name="class_labels" 
-                        rows="4"
-                        placeholder="e.g., For target variable 'Species': Setosa, Versicolor, Virginica&#10;For target variable 'Outcome': Positive, Negative">{{ old('class_labels', $data['class_labels'] ?? '') }}</textarea>
-                    <div class="form-hint mt-2">
-                        <i class="bi bi-info-circle me-1"></i>
-                        List all possible values for categorical variables, one variable per line
-                    </div>
+                <h5 class="card-section-title">Variable Information (Optional)</h5>
+                <p class="text-muted small mb-4">
+                    Describe the variables (columns) in your dataset. 
+                    This helps users understand your data structure.
+                </p>
+
+                <!-- Variables Table -->
+                <div class="table-responsive">
+                    <table class="table table-sm variables-table" id="variablesTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 15%">Name *</th>
+                                <th style="width: 15%">Display Name</th>
+                                <th style="width: 12%">Role *</th>
+                                <th style="width: 12%">Type *</th>
+                                <th style="width: 20%">Description</th>
+                                <th style="width: 10%">Unit</th>
+                                <th style="width: 8%">Min</th>
+                                <th style="width: 8%">Max</th>
+                                <th style="width: 5%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="variablesBody">
+                            @php
+                                $variablesData = old('variables', session('donation_wizard.variables', []));
+                                if (empty($variablesData)) {
+                                    $variablesData = [[
+                                        'variable_name' => '', 'display_name' => '', 'role' => 'feature', 
+                                        'variable_type' => 'Real', 'description' => '', 'unit' => '', 
+                                        'min_value' => '', 'max_value' => '', 'categories' => ''
+                                    ]];
+                                }
+                            @endphp
+                            
+                            @foreach($variablesData as $index => $var)
+                            <tr data-index="{{ $index }}">
+                                <td>
+                                    <input type="text" class="form-control form-control-sm @error('variables.'.$index.'.variable_name') is-invalid @enderror" 
+                                           name="variables[{{ $index }}][variable_name]" 
+                                           value="{{ $var['variable_name'] ?? '' }}" 
+                                           required maxlength="100" placeholder="column_name">
+                                    @error('variables.'.$index.'.variable_name')<div class="invalid-feedback d-block small">{{ $message }}</div>@enderror
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm" 
+                                           name="variables[{{ $index }}][display_name]" 
+                                           value="{{ $var['display_name'] ?? '' }}" 
+                                           maxlength="100" placeholder="Human readable">
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm @error('variables.'.$index.'.role') is-invalid @enderror" 
+                                            name="variables[{{ $index }}][role]" required>
+                                        <option value="feature" {{ ($var['role'] ?? '') == 'feature' ? 'selected' : '' }}>Feature</option>
+                                        <option value="target" {{ ($var['role'] ?? '') == 'target' ? 'selected' : '' }}>Target</option>
+                                        <option value="id" {{ ($var['role'] ?? '') == 'id' ? 'selected' : '' }}>ID</option>
+                                        <option value="metadata" {{ ($var['role'] ?? '') == 'metadata' ? 'selected' : '' }}>Metadata</option>
+                                        <option value="other" {{ ($var['role'] ?? '') == 'other' ? 'selected' : '' }}>Other</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm @error('variables.'.$index.'.variable_type') is-invalid @enderror var-type-select" 
+                                            name="variables[{{ $index }}][variable_type]" required onchange="toggleCategoriesField(this)">
+                                        @foreach(['Categorical', 'Integer', 'Real', 'Text', 'Binary', 'Ordinal', 'Nominal', 'DateTime'] as $vtype)
+                                        <option value="{{ $vtype }}" {{ ($var['variable_type'] ?? '') == $vtype ? 'selected' : '' }}>{{ $vtype }}</option>
+                                        @endforeach
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm" 
+                                           name="variables[{{ $index }}][description]" 
+                                           value="{{ $var['description'] ?? '' }}" 
+                                           maxlength="500" placeholder="Brief description">
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm" 
+                                           name="variables[{{ $index }}][unit]" 
+                                           value="{{ $var['unit'] ?? '' }}" 
+                                           maxlength="50" placeholder="e.g., kg, °C">
+                                </td>
+                                <td>
+                                    <input type="number" step="any" class="form-control form-control-sm" 
+                                           name="variables[{{ $index }}][min_value]" 
+                                           value="{{ $var['min_value'] ?? '' }}" placeholder="Min">
+                                </td>
+                                <td>
+                                    <input type="number" step="any" class="form-control form-control-sm" 
+                                           name="variables[{{ $index }}][max_value]" 
+                                           value="{{ $var['max_value'] ?? '' }}" placeholder="Max">
+                                </td>
+                                <td class="text-center">
+                                    @if($index > 0)
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeVariable({{ $index }})">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    @endif
+                                </td>
+                            </tr>
+                            <!-- Categories field for Categorical variables -->
+                            @if(($var['variable_type'] ?? '') == 'Categorical')
+                            <tr class="categories-row" data-index="{{ $index }}">
+                                <td colspan="9">
+                                    <small class="text-muted"><strong>Categories (comma-separated):</strong></small>
+                                    <input type="text" class="form-control form-control-sm mt-1" 
+                                           name="variables[{{ $index }}][categories]" 
+                                           value="{{ $var['categories'] ?? '' }}" 
+                                           placeholder="e.g., low, medium, high">
+                                </td>
+                            </tr>
+                            @endif
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
 
-                <hr class="my-4">
-
-                <!-- Additional Variable Information -->
-                <div class="form-group mb-4">
-                    <label for="variable_info" class="form-label">
-                        Provide additional information about the dataset's variables.
-                    </label>
-                    <textarea 
-                        class="form-control" 
-                        id="variable_info" 
-                        name="variable_info" 
-                        rows="6"
-                        placeholder="e.g., &#10;- Age: Measured in years, range 18-80&#10;- Income: Annual income in USD&#10;- Temperature: Measured in Celsius&#10;- Missing values are represented as NA">{{ old('variable_info', $data['variable_info'] ?? '') }}</textarea>
-                    <div class="form-hint mt-2">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Include units of measurement, value ranges, special codes, or any other relevant details
-                    </div>
-                </div>
-
-                <!-- Variable List (if available from previous page) -->
-                @if(isset($variables) && count($variables) > 0)
-                <div class="mt-4">
-                    <h6 class="mb-3">Variables from Dataset:</h6>
-                    <div class="variables-list">
-                        @foreach($variables as $index => $var)
-                        <div class="variable-item">
-                            <div class="variable-header">
-                                <strong>{{ $var['name'] ?? 'Variable ' . ($index + 1) }}</strong>
-                                <span class="badge bg-primary">{{ $var['role'] ?? 'Feature' }}</span>
-                            </div>
-                            <div class="variable-details">
-                                <span class="badge bg-secondary me-2">{{ $var['type'] ?? 'Continuous' }}</span>
-                                @if(!empty($var['description']))
-                                    <small class="text-muted">{{ $var['description'] }}</small>
-                                @endif
-                            </div>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-                @endif
+                <!-- Add Variable Button -->
+                <button type="button" class="btn btn-outline-primary btn-sm mt-3" onclick="addVariable()">
+                    <i class="bi bi-plus-circle me-1"></i>Add Variable
+                </button>
             </div>
 
             <!-- Navigation -->
-            <div class="form-navigation">
-                <a href="{{ route('contribute.keywords') }}" class="btn-back me-3">
-                    <i class="bi bi-arrow-left me-2"></i>BACK
+            <div class="form-navigation d-flex justify-content-between mt-4">
+                <a href="{{ route('contribute.keywords') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Back
                 </a>
-                <button type="submit" class="btn-next">
-                    NEXT </i>
+                <button type="submit" class="btn btn-primary">
+                    Next <i class="bi bi-arrow-right ms-2"></i>
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+<!-- Hidden Row Template -->
+<template id="variableRowTemplate">
+    <tr data-index="__INDEX__">
+        <td>
+            <input type="text" class="form-control form-control-sm" name="variables[__INDEX__][variable_name]" required maxlength="100" placeholder="column_name">
+        </td>
+        <td>
+            <input type="text" class="form-control form-control-sm" name="variables[__INDEX__][display_name]" maxlength="100" placeholder="Human readable">
+        </td>
+        <td>
+            <select class="form-select form-select-sm" name="variables[__INDEX__][role]" required>
+                <option value="feature">Feature</option>
+                <option value="target">Target</option>
+                <option value="id">ID</option>
+                <option value="metadata">Metadata</option>
+                <option value="other">Other</option>
+            </select>
+        </td>
+        <td>
+            <select class="form-select form-select-sm var-type-select" name="variables[__INDEX__][variable_type]" required onchange="toggleCategoriesField(this)">
+                <option value="Categorical">Categorical</option>
+                <option value="Integer">Integer</option>
+                <option value="Real">Real</option>
+                <option value="Text">Text</option>
+                <option value="Binary">Binary</option>
+                <option value="Ordinal">Ordinal</option>
+                <option value="Nominal">Nominal</option>
+                <option value="DateTime">DateTime</option>
+            </select>
+        </td>
+        <td>
+            <input type="text" class="form-control form-control-sm" name="variables[__INDEX__][description]" maxlength="500" placeholder="Brief description">
+        </td>
+        <td>
+            <input type="text" class="form-control form-control-sm" name="variables[__INDEX__][unit]" maxlength="50" placeholder="e.g., kg, °C">
+        </td>
+        <td>
+            <input type="number" step="any" class="form-control form-control-sm" name="variables[__INDEX__][min_value]" placeholder="Min">
+        </td>
+        <td>
+            <input type="number" step="any" class="form-control form-control-sm" name="variables[__INDEX__][max_value]" placeholder="Max">
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeVariable(__INDEX__)">
+                <i class="bi bi-trash"></i>
+            </button>
+        </td>
+    </tr>
+    <tr class="categories-row" data-index="__INDEX__" style="display: none;">
+        <td colspan="9">
+            <small class="text-muted"><strong>Categories (comma-separated):</strong></small>
+            <input type="text" class="form-control form-control-sm mt-1" name="variables[__INDEX__][categories]" placeholder="e.g., low, medium, high">
+        </td>
+    </tr>
+</template>
 @endsection
 
 @push('styles')
 <style>
-    .page-title {
-        padding-top: 50px;
-        color: #0077b6;
-        font-weight: 700;
-        font-size: 2rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .page-description {
-        color: #555;
-        line-height: 1.7;
-        font-size: 0.95rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .progress-wrapper {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 2.5rem;
-    }
-    
-    .progress {
-        flex: 1;
-        height: 8px;
-        background-color: #e9ecef;
-        border-radius: 4px;
-        overflow: hidden;
-    }
-    
-    .progress-text {
-        font-size: 0.85rem;
-        color: #6c757d;
-        white-space: nowrap;
-    }
-    
-    .form-card {
-        background: white;
-        border: 1px solid #e0e0e0;
-        border-radius: 12px;
-        padding: 2rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .card-section-title {
-        color: #0077b6;
-        font-weight: 600;
-        font-size: 1.05rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .form-group {
-        margin-bottom: 1.5rem;
-    }
-    
-    .form-label {
-        display: block;
-        font-weight: 600;
-        font-size: 0.95rem;
-        color: #333;
-        margin-bottom: 0.75rem;
-    }
-    
-    .form-control {
-        width: 100%;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-        padding: 0.75rem 1rem;
-        font-size: 0.95rem;
-        transition: border-color 0.2s;
-        font-family: inherit;
-    }
-    
-    .form-control:focus {
-        border-color: #0077b6;
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(0,119,182,0.12);
-    }
-    
-    .form-hint {
-        font-size: 0.85rem;
-        color: #6c757d;
-    }
-    
-    .form-hint i {
-        color: #0077b6;
-    }
-    
-    .variables-list {
-        margin-top: 1rem;
-    }
-    
-    .variable-item {
-        background-color: #f8f9fa;
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 1rem;
-    }
-    
-    .variable-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-    }
-    
-    .variable-header strong {
-        color: #0077b6;
-        font-size: 1rem;
-    }
-    
-    .variable-details {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    
-    .badge {
-        display: inline-block;
-        padding: 0.35rem 0.65rem;
-        font-size: 0.8rem;
-        font-weight: 600;
-        border-radius: 4px;
-    }
-    
-    .badge.bg-primary {
-        background-color: #0077b6 !important;
-        color: white;
-    }
-    
-    .badge.bg-secondary {
-        background-color: #6c757d !important;
-        color: white;
-    }
-    
-    .btn-back {
-        background-color: #fff;
-        color: #dc3545;
-        border: 1px solid #dc3545;
-        font-weight: 700;
-        padding: 0.75rem 2rem;
-        border-radius: 6px;
-        font-size: 0.95rem;
-        text-decoration: none;
-        display: inline-block;
-    }
-    
-    .btn-back:hover {
-        background-color: #dc3545;
-        color: white;
-    }
-    
-    .btn-next {
-        background-color: #0077b6;
-        color: white;
-        font-weight: 700;
-        padding: 0.75rem 2.5rem;
-        border: none;
-        border-radius: 6px;
-        font-size: 0.95rem;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-    
-    .btn-next:hover {
-        background-color: #005f73;
-    }
-    
-    .form-navigation {
-        display: flex;
-        justify-content: flex-start;
-        margin-top: 2rem;
-        margin-bottom: 3rem;
-    }
-    
-    @media (max-width: 768px) {
-        .container {
-            padding: 1.5rem 1rem;
-        }
-        
-        .form-card {
-            padding: 1.5rem;
-        }
-        
-        .page-title {
-            font-size: 1.5rem;
-        }
-    }
+    .variables-table th { font-weight: 600; font-size: 0.8rem; }
+    .variables-table td { padding: 0.4rem 0.3rem; vertical-align: middle; }
+    .variables-table .form-control, .variables-table .form-select { font-size: 0.8rem; padding: 0.3rem 0.5rem; }
+    .categories-row { background: #f8f9fa; }
+    .categories-row td { padding-top: 0.2rem !important; padding-bottom: 0.5rem !important; }
 </style>
 @endpush
 
 @push('scripts')
 <script>
-// Auto-save to localStorage
-const form = document.querySelector('form');
-const inputs = form.querySelectorAll('textarea');
+let varIndex = {{ count($variablesData) }};
 
-inputs.forEach(input => {
-    input.addEventListener('input', function() {
-        localStorage.setItem('variable_info_' + this.id, this.value);
+function addVariable() {
+    const template = document.getElementById('variableRowTemplate');
+    const clone = template.content.cloneNode(true);
+    const rows = clone.querySelectorAll('tr');
+    
+    rows.forEach(row => {
+        const html = row.outerHTML.replace(/__INDEX__/g, varIndex);
+        document.getElementById('variablesBody').insertAdjacentHTML('beforeend', html);
     });
     
-    // Restore from localStorage
-    const saved = localStorage.getItem('variable_info_' + input.id);
-    if (saved && !input.value) {
-        input.value = saved;
-    }
-});
+    varIndex++;
+}
 
-// Clear localStorage on successful submit
-form.addEventListener('submit', function() {
-    inputs.forEach(input => {
-        localStorage.removeItem('variable_info_' + input.id);
-    });
-});
-
-// Character count
-inputs.forEach(input => {
-    const counter = document.createElement('div');
-    counter.className = 'text-muted small mt-1';
-    counter.style.textAlign = 'right';
-    input.parentNode.appendChild(counter);
-    
-    function updateCount() {
-        const count = input.value.length;
-        const max = input.maxLength || 5000;
-        counter.textContent = `${count} / ${max} characters`;
-        
-        if (count > max * 0.9) {
-            counter.classList.add('text-warning');
-            counter.classList.remove('text-muted');
-        } else {
-            counter.classList.add('text-muted');
-            counter.classList.remove('text-warning');
+function removeVariable(index) {
+    document.querySelectorAll(`tr[data-index="${index}"]`).forEach(row => row.remove());
+    // Re-index remaining rows
+    let newIndex = 0;
+    document.querySelectorAll('#variablesBody tr[data-index]').forEach(row => {
+        const idx = row.dataset.index;
+        if (!row.classList.contains('categories-row')) {
+            row.setAttribute('data-index', newIndex);
+            row.querySelectorAll('[name]').forEach(input => {
+                input.name = input.name.replace(/\[\d+\]/, `[${newIndex}]`);
+            });
+            newIndex++;
         }
-    }
+    });
+    varIndex = newIndex;
+}
+
+function toggleCategoriesField(select) {
+    const row = select.closest('tr');
+    const index = row.dataset.index;
+    const catRow = document.querySelector(`.categories-row[data-index="${index}"]`);
     
-    input.addEventListener('input', updateCount);
-    updateCount();
+    if (catRow) {
+        catRow.style.display = select.value === 'Categorical' ? '' : 'none';
+    }
+}
+
+// Initialize categories visibility on load
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.var-type-select').forEach(select => {
+        toggleCategoriesField(select);
+    });
+});
+
+// Form validation
+document.getElementById('variablesForm').addEventListener('submit', function(e) {
+    const rows = document.querySelectorAll('#variablesBody tr[data-index]:not(.categories-row)');
+    if (rows.length === 0) return true; // Optional section
+    
+    let valid = true;
+    rows.forEach(row => {
+        const name = row.querySelector('input[name*="[variable_name]"]');
+        const role = row.querySelector('select[name*="[role]"]');
+        const type = row.querySelector('select[name*="[variable_type]"]');
+        
+        if (!name.value.trim()) {
+            valid = false;
+            name.classList.add('is-invalid');
+        } else {
+            name.classList.remove('is-invalid');
+        }
+        if (!role.value) {
+            valid = false;
+            role.classList.add('is-invalid');
+        } else {
+            role.classList.remove('is-invalid');
+        }
+        if (!type.value) {
+            valid = false;
+            type.classList.add('is-invalid');
+        } else {
+            type.classList.remove('is-invalid');
+        }
+    });
+    
+    if (!valid) {
+        e.preventDefault();
+        alert('Please fill in all required fields for each variable');
+        return false;
+    }
 });
 </script>
 @endpush

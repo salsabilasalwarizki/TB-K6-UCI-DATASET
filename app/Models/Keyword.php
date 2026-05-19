@@ -19,12 +19,18 @@ class Keyword extends Model
         'updated_at' => 'datetime',
     ];
     
-    public function datasets(): BelongsToMany
-    {
-        return $this->belongsToMany(
-            Dataset::class, 'dataset_keywords', 'keyword_id', 'dataset_id'
-        )->withTimestamps();
-    }
+  /**
+ * Get all datasets that use this keyword
+ */
+public function datasets(): BelongsToMany
+{
+    return $this->belongsToMany(
+        Dataset::class, 
+        'dataset_keywords', 
+        'keyword_id', 
+        'dataset_id'
+    )->withTimestamps();
+}
     
     public function getDatasetsCountAttribute(): int
     {

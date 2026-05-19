@@ -5,182 +5,152 @@
 <div class="donation-page">
     <div class="container">
         <!-- Header -->
-        <div class="donation-header">
+        <div class="donation-header text-center mb-4">
             <h1 class="page-title">Dataset Donation Form</h1>
-            <p class="page-description">
-                We offer users the option to upload their dataset data to our repository.
-            </p>
-            <p class="page-description">
-                Users can provide tabular or non-tabular dataset data which will be made publicly available on our repository. 
-                Donators are free to edit their donated datasets, but edits must be approved before finalizing.
-            </p>
+            <p class="page-description">Page 3 of 7: Dataset Creators</p>
         </div>
 
         <!-- Progress Bar -->
-        <div class="progress-wrapper">
-            <div class="progress">
+        <div class="progress-wrapper mb-4">
+            <div class="progress" style="height: 8px;">
                 <div class="progress-bar bg-warning" style="width: 42.5%"></div>
             </div>
-            <span class="progress-text">Page 3 / 7</span>
+            <span class="progress-text small text-muted">Page 3 / 7</span>
         </div>
 
         <!-- Form -->
-        <form action="{{ route('contribute.creators.store') }}" method="POST">
+        <form action="{{ route('contribute.creators.store') }}" method="POST" id="creatorsForm">
             @csrf
+            
+            @if ($errors->any())
+            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <h6 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Form has errors:</h6>
+                <ul class="mb-0 small">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            @endif
 
             <!-- Creators Section -->
             <div class="form-card">
-                <h5 class="card-section-title">Optional: Add Creators</h5>
-                
-                <div class="alert alert-info mb-4">
-                    <strong>Note:</strong> Creator information will be publicly visible on the dataset page.
-                </div>
+                <h5 class="card-section-title">Dataset Creators (Optional)</h5>
+                <p class="text-muted small mb-4">
+                    Add people who created or contributed to this dataset. 
+                    At least one creator is recommended for proper attribution.
+                </p>
 
-                <!-- Creators List -->
-                <div id="creators-container">
+                <!-- Creators Container -->
+                <div id="creatorsContainer">
                     @php
-                        $creators = old('creators', $creatorsData ?? []);
+                        $creatorsData = old('creators', session('donation_wizard.creators', []));
+                        if (empty($creatorsData)) {
+                            $creatorsData = [['name' => '', 'email' => '', 'affiliation' => '', 'orcid' => '', 'contribution_role' => 'Creator']];
+                        }
                     @endphp
                     
-                    @forelse($creators as $index => $creator)
-                        <div class="creator-item mb-4" data-index="{{ $index }}">
-                            <div class="creator-header d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="mb-0">Creator {{ $index + 1 }}</h6>
-                                @if($index > 0)
-                                    <button type="button" class="btn-remove-creator text-danger" onclick="removeCreator({{ $index }})">
-                                        <i class="bi bi-trash"></i> Remove
-                                    </button>
-                                @endif
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Name <span class="required">*</span></label>
-                                    <input type="text" 
-                                           class="form-control" 
-                                           name="creators[{{ $index }}][name]" 
-                                           value="{{ $creator['name'] ?? '' }}" 
-                                           required>
-                                </div>
-                                
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Affiliation</label>
-                                    <input type="text" 
-                                           class="form-control" 
-                                           name="creators[{{ $index }}][affiliation]" 
-                                           value="{{ $creator['affiliation'] ?? '' }}"
-                                           placeholder="e.g., University of California">
-                                </div>
-                                
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Email</label>
-                                    <input type="email" 
-                                           class="form-control" 
-                                           name="creators[{{ $index }}][email]" 
-                                           value="{{ $creator['email'] ?? '' }}"
-                                           placeholder="creator@example.com">
-                                </div>
-                                
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">ORCID</label>
-                                    <input type="text" 
-                                           class="form-control" 
-                                           name="creators[{{ $index }}][orcid]" 
-                                           value="{{ $creator['orcid'] ?? '' }}"
-                                           placeholder="0000-0000-0000-0000">
-                                    <div class="form-hint">Format: 0000-0000-0000-0000</div>
-                                </div>
-                                
-                                <div class="col-md-12 mb-3">
-                                    <label class="form-label">Contribution Role</label>
-                                    <select class="form-control" name="creators[{{ $index }}][contribution_role]">
-                                        <option value="Creator" {{ ($creator['contribution_role'] ?? '') == 'Creator' ? 'selected' : '' }}>Creator</option>
-                                        <option value="Donor" {{ ($creator['contribution_role'] ?? '') == 'Donor' ? 'selected' : '' }}>Donor</option>
-                                        <option value="Analyst" {{ ($creator['contribution_role'] ?? '') == 'Analyst' ? 'selected' : '' }}>Analyst</option>
-                                        <option value="Data Collector" {{ ($creator['contribution_role'] ?? '') == 'Data Collector' ? 'selected' : '' }}>Data Collector</option>
-                                        <option value="Other" {{ ($creator['contribution_role'] ?? '') == 'Other' ? 'selected' : '' }}>Other</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <hr class="my-4">
+                    @foreach($creatorsData as $index => $creator)
+                    <div class="creator-item p-3 mb-3 border rounded" data-index="{{ $index }}">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0 text-primary">Creator {{ $index + 1 }}</h6>
+                            @if($index > 0)
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCreator({{ $index }})">
+                                <i class="bi bi-trash me-1"></i>Remove
+                            </button>
+                            @endif
                         </div>
-                    @empty
-                        <div id="no-creators-msg" class="text-center py-5">
-                            <i class="bi bi-people display-4 text-muted mb-3"></i>
-                            <p class="text-muted">No creators added yet. Click the button below to add creators.</p>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small">Full Name <span class="required">*</span></label>
+                                <input type="text" class="form-control form-control-sm @error('creators.'.$index.'.name') is-invalid @enderror" 
+                                       name="creators[{{ $index }}][name]" 
+                                       value="{{ $creator['name'] ?? '' }}" 
+                                       required maxlength="255"
+                                       placeholder="e.g., Jane Doe">
+                                @error('creators.'.$index.'.name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small">Contribution Role <span class="required">*</span></label>
+                                <select class="form-select form-select-sm @error('creators.'.$index.'.contribution_role') is-invalid @enderror" 
+                                        name="creators[{{ $index }}][contribution_role]" required>
+                                    <option value="Creator" {{ ($creator['contribution_role'] ?? '') == 'Creator' ? 'selected' : '' }}>Creator</option>
+                                    <option value="Donor" {{ ($creator['contribution_role'] ?? '') == 'Donor' ? 'selected' : '' }}>Donor</option>
+                                    <option value="Analyst" {{ ($creator['contribution_role'] ?? '') == 'Analyst' ? 'selected' : '' }}>Analyst</option>
+                                    <option value="Data Collector" {{ ($creator['contribution_role'] ?? '') == 'Data Collector' ? 'selected' : '' }}>Data Collector</option>
+                                    <option value="Other" {{ ($creator['contribution_role'] ?? '') == 'Other' ? 'selected' : '' }}>Other</option>
+                                </select>
+                                @error('creators.'.$index.'.contribution_role')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small">Affiliation</label>
+                                <input type="text" class="form-control form-control-sm" 
+                                       name="creators[{{ $index }}][affiliation]" 
+                                       value="{{ $creator['affiliation'] ?? '' }}" 
+                                       maxlength="255"
+                                       placeholder="e.g., University of California">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small">Email</label>
+                                <input type="email" class="form-control form-control-sm" 
+                                       name="creators[{{ $index }}][email]" 
+                                       value="{{ $creator['email'] ?? '' }}" 
+                                       maxlength="255"
+                                       placeholder="creator@example.com">
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label small">ORCID</label>
+                                <input type="text" class="form-control form-control-sm" 
+                                       name="creators[{{ $index }}][orcid]" 
+                                       value="{{ $creator['orcid'] ?? '' }}" 
+                                       pattern="^\d{4}-\d{4}-\d{4}-\d{4}$"
+                                       maxlength="19"
+                                       placeholder="0000-0000-0000-0000">
+                                <div class="form-hint">Format: 0000-0000-0000-0000</div>
+                            </div>
                         </div>
-                    @endforelse
+                    </div>
+                    @endforeach
                 </div>
 
                 <!-- Add Creator Button -->
-                <div class="text-center mt-4 mb-4">
-                    <button type="button" class="btn-add-creator" onclick="addCreator()">
-                        <i class="bi bi-plus-circle me-2"></i>BEGIN ADDING CREATORS
-                    </button>
-                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="addCreator()">
+                    <i class="bi bi-plus-circle me-1"></i>Add Another Creator
+                </button>
             </div>
 
             <!-- Navigation -->
-            <div class="form-navigation">
-                <a href="{{ route('contribute.paper') }}" class="btn-back me-3">
-                    <i class="bi bi-arrow-left me-2"></i>BACK
+            <div class="form-navigation d-flex justify-content-between mt-4">
+                <a href="{{ route('contribute.paper') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Back
                 </a>
-                <button type="submit" class="btn-next">
-                    NEXT <i class="bi bi-arrow-right ms-2"></i>
+                <button type="submit" class="btn btn-primary">
+                    Next <i class="bi bi-arrow-right ms-2"></i>
                 </button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Hidden template for new creator -->
-<template id="creator-template">
-    <div class="creator-item mb-4" data-index="__INDEX__">
-        <div class="creator-header d-flex justify-content-between align-items-center mb-3">
-            <h6 class="mb-0">Creator __INDEX__</h6>
-            <button type="button" class="btn-remove-creator text-danger" onclick="removeCreator(__INDEX__)">
-                <i class="bi bi-trash"></i> Remove
+<!-- Hidden Template for New Creator -->
+<template id="creatorTemplate">
+    <div class="creator-item p-3 mb-3 border rounded" data-index="__INDEX__">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0 text-primary">Creator __INDEX__</h6>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCreator(__INDEX__)">
+                <i class="bi bi-trash me-1"></i>Remove
             </button>
         </div>
-        
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Name <span class="required">*</span></label>
-                <input type="text" 
-                       class="form-control" 
-                       name="creators[__INDEX__][name]" 
-                       required>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label small">Full Name <span class="required">*</span></label>
+                <input type="text" class="form-control form-control-sm" name="creators[__INDEX__][name]" required maxlength="255" placeholder="e.g., Jane Doe">
             </div>
-            
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Affiliation</label>
-                <input type="text" 
-                       class="form-control" 
-                       name="creators[__INDEX__][affiliation]"
-                       placeholder="e.g., University of California">
-            </div>
-            
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Email</label>
-                <input type="email" 
-                       class="form-control" 
-                       name="creators[__INDEX__][email]"
-                       placeholder="creator@example.com">
-            </div>
-            
-            <div class="col-md-6 mb-3">
-                <label class="form-label">ORCID</label>
-                <input type="text" 
-                       class="form-control" 
-                       name="creators[__INDEX__][orcid]"
-                       placeholder="0000-0000-0000-0000">
-                <div class="form-hint">Format: 0000-0000-0000-0000</div>
-            </div>
-            
-            <div class="col-md-12 mb-3">
-                <label class="form-label">Contribution Role</label>
-                <select class="form-control" name="creators[__INDEX__][contribution_role]">
+            <div class="col-md-6">
+                <label class="form-label small">Contribution Role <span class="required">*</span></label>
+                <select class="form-select form-select-sm" name="creators[__INDEX__][contribution_role]" required>
                     <option value="Creator">Creator</option>
                     <option value="Donor">Donor</option>
                     <option value="Analyst">Analyst</option>
@@ -188,264 +158,80 @@
                     <option value="Other">Other</option>
                 </select>
             </div>
+            <div class="col-md-6">
+                <label class="form-label small">Affiliation</label>
+                <input type="text" class="form-control form-control-sm" name="creators[__INDEX__][affiliation]" maxlength="255" placeholder="e.g., University of California">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small">Email</label>
+                <input type="email" class="form-control form-control-sm" name="creators[__INDEX__][email]" maxlength="255" placeholder="creator@example.com">
+            </div>
+            <div class="col-md-12">
+                <label class="form-label small">ORCID</label>
+                <input type="text" class="form-control form-control-sm" name="creators[__INDEX__][orcid]" pattern="^\d{4}-\d{4}-\d{4}-\d{4}$" maxlength="19" placeholder="0000-0000-0000-0000">
+                <div class="form-hint">Format: 0000-0000-0000-0000</div>
+            </div>
         </div>
-        
-        <hr class="my-4">
     </div>
 </template>
 @endsection
 
-@push('styles')
-<style>
-    .page-title {
-        padding-top: 50px;
-        color: #0077b6;
-        font-weight: 700;
-        font-size: 2rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .page-description {
-        color: #555;
-        line-height: 1.7;
-        font-size: 0.95rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .progress-wrapper {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 2.5rem;
-    }
-    
-    .progress {
-        flex: 1;
-        height: 8px;
-        background-color: #e9ecef;
-        border-radius: 4px;
-        overflow: hidden;
-    }
-    
-    .progress-text {
-        font-size: 0.85rem;
-        color: #6c757d;
-        white-space: nowrap;
-    }
-    
-    .form-card {
-        background: white;
-        border: 1px solid #e0e0e0;
-        border-radius: 12px;
-        padding: 2rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .card-section-title {
-        color: #0077b6;
-        font-weight: 600;
-        font-size: 1.05rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .required {
-        color: #dc3545;
-    }
-    
-    .form-label {
-        display: block;
-        font-weight: 600;
-        font-size: 0.95rem;
-        color: #333;
-        margin-bottom: 0.5rem;
-    }
-    
-    .form-control {
-        width: 100%;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-        padding: 0.65rem 1rem;
-        font-size: 0.95rem;
-        transition: border-color 0.2s;
-    }
-    
-    .form-control:focus {
-        border-color: #0077b6;
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(0,119,182,0.12);
-    }
-    
-    .form-hint {
-        font-size: 0.8rem;
-        color: #6c757d;
-        margin-top: 0.4rem;
-    }
-    
-    .btn-add-creator {
-        background-color: #0077b6;
-        color: white;
-        font-weight: 700;
-        padding: 0.75rem 2.5rem;
-        border: none;
-        border-radius: 6px;
-        font-size: 0.95rem;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    
-    .btn-add-creator:hover {
-        background-color: #005f73;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,119,182,0.3);
-    }
-    
-    .btn-remove-creator {
-        background: none;
-        border: none;
-        font-weight: 600;
-        cursor: pointer;
-        padding: 0.5rem;
-    }
-    
-    .btn-remove-creator:hover {
-        text-decoration: underline;
-    }
-    
-    .creator-item {
-        background-color: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 8px;
-        border: 1px solid #e0e0e0;
-    }
-    
-    .alert-info {
-        background-color: #e9f5f9;
-        border: 1px solid #0077b6;
-        color: #005f73;
-        padding: 1rem;
-        border-radius: 6px;
-    }
-    
-    .btn-back {
-        background-color: #fff;
-        color: #dc3545;
-        border: 1px solid #dc3545;
-        font-weight: 700;
-        padding: 0.75rem 2rem;
-        border-radius: 6px;
-        font-size: 0.95rem;
-        text-decoration: none;
-        display: inline-block;
-    }
-    
-    .btn-back:hover {
-        background-color: #dc3545;
-        color: white;
-    }
-    
-    .btn-next {
-        background-color: #0077b6;
-        color: white;
-        font-weight: 700;
-        padding: 0.75rem 2.5rem;
-        border: none;
-        border-radius: 6px;
-        font-size: 0.95rem;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-    
-    .btn-next:hover {
-        background-color: #005f73;
-    }
-    
-    .form-navigation {
-        display: flex;
-        justify-content: flex-start;
-        margin-top: 2rem;
-        margin-bottom: 3rem;
-    }
-    
-    @media (max-width: 768px) {
-        .container {
-            padding: 1.5rem 1rem;
-        }
-        
-        .form-card {
-            padding: 1.5rem;
-        }
-        
-        .page-title {
-            font-size: 1.5rem;
-        }
-    }
-</style>
-@endpush
-
 @push('scripts')
 <script>
-let creatorIndex = {{ count($creatorsData ?? old('creators', [])) }};
+let creatorIndex = {{ count($creatorsData) }};
 
 function addCreator() {
-    // Hide no creators message
-    const noCreatorsMsg = document.getElementById('no-creators-msg');
-    if (noCreatorsMsg) {
-        noCreatorsMsg.style.display = 'none';
-    }
-    
-    // Get template
-    const template = document.getElementById('creator-template');
+    const template = document.getElementById('creatorTemplate');
     const clone = template.content.cloneNode(true);
-    
-    // Replace __INDEX__ with actual index
     const html = clone.querySelector('.creator-item').outerHTML.replace(/__INDEX__/g, creatorIndex);
     
-    // Add to container
-    const container = document.getElementById('creators-container');
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    container.appendChild(tempDiv.firstElementChild);
-    
+    document.getElementById('creatorsContainer').insertAdjacentHTML('beforeend', html);
     creatorIndex++;
 }
 
 function removeCreator(index) {
-    const creatorItem = document.querySelector(`.creator-item[data-index="${index}"]`);
-    if (creatorItem) {
-        creatorItem.remove();
-        
-        // Show no creators message if all removed
-        const remainingCreators = document.querySelectorAll('.creator-item');
-        if (remainingCreators.length === 0) {
-            const noCreatorsMsg = document.getElementById('no-creators-msg');
-            if (noCreatorsMsg) {
-                noCreatorsMsg.style.display = 'block';
-            }
-        }
+    const item = document.querySelector(`.creator-item[data-index="${index}"]`);
+    if (item) {
+        item.remove();
+        // Re-index remaining items to maintain sequential indices
+        document.querySelectorAll('.creator-item').forEach((el, i) => {
+            el.setAttribute('data-index', i);
+            el.querySelectorAll('[name]').forEach(input => {
+                input.name = input.name.replace(/\[\d+\]/, `[${i}]`);
+            });
+        });
+        creatorIndex = document.querySelectorAll('.creator-item').length;
     }
 }
 
-// Form validation before submit
-document.querySelector('form').addEventListener('submit', function(e) {
+// Form validation
+document.getElementById('creatorsForm').addEventListener('submit', function(e) {
     const creators = document.querySelectorAll('.creator-item');
-    if (creators.length === 0) {
-        // Allow submission even with no creators (it's optional)
-        return true;
-    }
-    
-    // Validate each creator has at least a name
     let valid = true;
+    
     creators.forEach(creator => {
         const nameInput = creator.querySelector('input[name*="[name]"]');
-        if (nameInput && !nameInput.value.trim()) {
+        const roleSelect = creator.querySelector('select[name*="[contribution_role]"]');
+        
+        if (!nameInput.value.trim()) {
             valid = false;
             nameInput.classList.add('is-invalid');
+        } else {
+            nameInput.classList.remove('is-invalid');
+        }
+        
+        if (!roleSelect.value) {
+            valid = false;
+            roleSelect.classList.add('is-invalid');
+        } else {
+            roleSelect.classList.remove('is-invalid');
         }
     });
     
     if (!valid) {
         e.preventDefault();
-        alert('Please fill in all required fields (Name) for each creator.');
+        alert('Please fill in all required fields for each creator');
+        return false;
     }
 });
 </script>
