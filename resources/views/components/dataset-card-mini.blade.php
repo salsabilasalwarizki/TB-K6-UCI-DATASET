@@ -24,7 +24,14 @@
                 {{ $dataset->display_name ?? $dataset->name }}
             </a>
         </h6>
-        
+        @props(['dataset', 'showStats' => true, 'showBadge' => false, 'badgeText' => '', 'badgeVariant' => 'primary'])
+
+<!-- Di dalam card, tambahkan badge conditional -->
+@if($showBadge && $badgeText)
+<span class="badge bg-{{ $badgeVariant }} position-absolute top-0 end-0 m-2">
+    {{ $badgeText }}
+</span>
+@endif
         <!-- Badges: Data Type & Task Type (langsung dari field ENUM) -->
         <div class="d-flex justify-content-center gap-1 mb-2">
             @if($dataset->data_type)

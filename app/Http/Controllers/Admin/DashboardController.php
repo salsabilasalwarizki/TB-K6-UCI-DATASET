@@ -29,10 +29,10 @@ class DashboardController extends Controller
             ->get();
 
         // Recent activity
-        $recentActivity = Dataset::with('creators')
-            ->orderBy('created_at', 'desc')
-            ->take(5)
-            ->get();
+        $recentActivity = Dataset::with('contributors')
+    ->orderBy('created_at', 'desc')
+    ->take(5)
+    ->get();
 
         // Monthly submissions chart data
         $monthlySubmissions = Dataset::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
