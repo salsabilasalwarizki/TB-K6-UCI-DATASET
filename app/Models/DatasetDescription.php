@@ -7,16 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DatasetDescription extends Model
 {
-    // ✅ Tentukan nama tabel (karena tidak mengikuti konvensi plural)
-    protected $table = 'dataset_descriptions';
-    
-    // ✅ Primary key
     protected $primaryKey = 'description_id';
-    
-    // ✅ Auto-increment
+    protected $keyType = 'bigint';
     public $incrementing = true;
     
-    // ✅ Fillable fields (yang boleh di-mass assign)
+    protected $table = 'dataset_descriptions';
+    
     protected $fillable = [
         'dataset_id',
         'purpose',
@@ -29,15 +25,89 @@ class DatasetDescription extends Model
         'citation_requests',
     ];
     
-    // ✅ Casts (untuk konversi otomatis)
     protected $casts = [
         'description_id' => 'integer',
         'dataset_id' => 'integer',
+        // ✅ PENTING: Jangan cast ke array/object jika kolom adalah TEXT/VARCHAR
+        // Hapus baris berikut jika ada:
+        // 'purpose' => 'array',
+        // 'instances_represent' => 'object',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
     
-    // ✅ Relasi ke Dataset
+    /**
+     * Relationship ke Dataset
+     */
     public function dataset(): BelongsTo
     {
         return $this->belongsTo(Dataset::class, 'dataset_id', 'dataset_id');
     }
-}  // ← Hanya SATU tanda } di akhir file
+    
+    /**
+     * Accessor: Pastikan return string, bukan object
+     */
+    public function getPurposeAttribute($value): ?string
+    {
+        if ($value === null) return null;
+        if (is_object($value)) return json_encode($value);
+        if (is_array($value)) return json_encode($value);
+        return (string) $value;
+    }
+    
+    public function getInstancesRepresentAttribute($value): ?string
+    {
+        if ($value === null) return null;
+        if (is_object($value)) return json_encode($value);
+        if (is_array($value)) return json_encode($value);
+        return (string) $value;
+    }
+    
+    public function getFundingAttribute($value): ?string
+    {
+        if ($value === null) return null;
+        if (is_object($value)) return json_encode($value);
+        if (is_array($value)) return json_encode($value);
+        return (string) $value;
+    }
+    
+    public function getAdditionalInfoAttribute($value): ?string
+    {
+        if ($value === null) return null;
+        if (is_object($value)) return json_encode($value);
+        if (is_array($value)) return json_encode($value);
+        return (string) $value;
+    }
+    
+    public function getDataSplitsAttribute($value): ?string
+    {
+        if ($value === null) return null;
+        if (is_object($value)) return json_encode($value);
+        if (is_array($value)) return json_encode($value);
+        return (string) $value;
+    }
+    
+    public function getSensitiveDataAttribute($value): ?string
+    {
+        if ($value === null) return null;
+        if (is_object($value)) return json_encode($value);
+        if (is_array($value)) return json_encode($value);
+        return (string) $value;
+    }
+    
+    public function getPreprocessingAttribute($value): ?string
+    {
+        if ($value === null) return null;
+        if (is_object($value)) return json_encode($value);
+        if (is_array($value)) return json_encode($value);
+        return (string) $value;
+    }
+    
+    public function getCitationRequestsAttribute($value): ?string
+    {
+        if ($value === null) return null;
+        if (is_object($value)) return json_encode($value);
+        if (is_array($value)) return json_encode($value);
+        return (string) $value;
+    }
+}

@@ -3,183 +3,358 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\{BelongsTo, HasMany, BelongsToMany};
-use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\{
+    BelongsTo, HasMany, BelongsToMany, HasOne, MorphMany
+};
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class Dataset extends Model
 {
     protected $primaryKey = 'dataset_id';
+    protected $keyType = 'bigint';
     public $incrementing = true;
-    protected $keyType = 'int';
-
+    
+    protected $table = 'datasets';
+    
     protected $fillable = [
-        'name', 'description', 'donated_date', 'last_updated',
-        'characteristics', 'feature_type', 'num_instances', 'num_features',
-        'has_missing_values', 'additional_info', 'attribute_info',
-        'view_count', 'download_count', 'citation_count',
-        'task_id', 'subject_area_id', 'license_id', 'doi_id',
-        'status', 'approved_at', 'approved_by',
-        'rejected_at', 'rejected_by', 'admin_notes',
-        'user_id', 'slug', 'abstract', 'data_type', 'task_type',
-        'dataset_url', 'linked_date', 'domain',
+        'uci_id', 'slug', 'name', 'display_name', 'description', 'abstract', 'summary',
+        'num_instances', 'num_features', 'num_classes', 'file_size', 'file_size_bytes',
+        'data_type', 'task_type', 'subject_area', 'domain', 'dataset_url', 'detail_url',
+        'thumbnail_url', 'large_image_url', 'status', 'donated_date', 'linked_date',
+        'view_count', 'download_count', 'citation_count', 'has_missing_values',
+        'user_id', 'license_id', 'doi_id', 'approved_at', 'approved_by',
+        'rejected_at', 'rejected_by', 'admin_notes'
     ];
-
+    
     protected $casts = [
-        'donated_date' => 'date',
-        'last_updated' => 'date',
-        'approved_at' => 'datetime',
-        'rejected_at' => 'datetime',
-        'has_missing_values' => 'boolean',
-        'additional_info' => 'array',
-        'attribute_info' => 'array',
+        'dataset_id' => 'integer',
+        'num_instances' => 'integer',
+        'num_features' => 'integer',
+        'num_classes' => 'integer',
+        'file_size_bytes' => 'integer',
         'view_count' => 'integer',
         'download_count' => 'integer',
         'citation_count' => 'integer',
-        'num_instances' => 'integer',
-        'num_features' => 'integer',
+        'has_missing_values' => 'boolean',
+        'donated_date' => 'date',
+        'linked_date' => 'date',
+        'approved_at' => 'datetime',
+        'rejected_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
-
-    protected $hidden = ['approved_by', 'rejected_by', 'admin_notes'];
-    protected $visible = [
-        'dataset_id', 'name', 'description', 'donated_date', 'last_updated',
-        'characteristics', 'feature_type', 'num_instances', 'num_features',
-        'has_missing_values', 'view_count', 'download_count', 'citation_count',
-        'task', 'subjectArea', 'license', 'doi', 'creators',
-        'papers', 'files', 'variables', 'status',
-    ];
-
-    /* RELATIONSHIPS */
-    public function task(): BelongsTo { return $this->belongsTo(Task::class, 'task_id', 'task_id'); }
-    public function subjectArea(): BelongsTo { return $this->belongsTo(SubjectArea::class, 'subject_area_id', 'area_id'); }
-    public function license(): BelongsTo { return $this->belongsTo(License::class, 'license_id', 'license_id'); }
-    public function doi(): BelongsTo { return $this->belongsTo(Doi::class, 'doi_id', 'doi_id'); }
-
-    public function variables(): HasMany {
-        return $this->hasMany(Variable::class, 'dataset_id', 'dataset_id')->orderBy('display_order');
+    
+    protected $appends = ['url', 'thumbnail'];
+    
+    // === RELATIONSHIPS ===
+    
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
+    
+    public function license(): BelongsTo
+    {
+        return $this->belongsTo(License::class, 'license_id');
+    }
+    
+    public function doi(): BelongsTo
+    {
+        return $this->belongsTo(Doi::class, 'doi_id');
+    }
+    
 
-    public function files(): BelongsToMany {
-        return $this->belongsToMany(File::class, 'dataset_files', 'dataset_id', 'file_id')
-            ->withPivot('file_role', 'is_default', 'display_order', 'created_at');
+// ✅ Relationship yang benar - gunakan nama unik
+public function descriptionDetails(): HasOne
+{
+    return $this->hasOne(
+        DatasetDescription::class, 
+        'dataset_id', 
+        'dataset_id'
+    );
+}
+    
+    public function descriptions()
+    {
+        // Helper accessor for blade compatibility
+        return $this->description;
     }
+    
+// app/Models/Dataset.php
 
-    public function creators(): BelongsToMany {
-        return $this->belongsToMany(Person::class, 'dataset_contributors', 'dataset_id', 'person_id')
-            ->withPivot('contribution_role', 'display_order', 'created_at');
+public function files(): BelongsToMany
+{
+    return $this->belongsToMany(
+        File::class, 
+        'dataset_files', 
+        'dataset_id', 
+        'file_id'
+    )
+    ->withPivot('file_role', 'is_default', 'display_order', 'created_at')
+    // ✅ Gunakan orderByPivot atau nama tabel langsung
+    ->orderByPivot('display_order')
+    ->orderByPivot('is_default', 'desc');
+}
+    
+public function images(): BelongsToMany
+{
+    return $this->belongsToMany(
+        Image::class, 
+        'dataset_images', 
+        'dataset_id', 
+        'image_id'
+    )
+    ->withPivot('role', 'display_order', 'is_primary', 'created_at')
+    ->orderByPivot('display_order')  // ✅ Gunakan orderByPivot, bukan orderBy('pivot.display_order')
+    ->orderByPivot('is_primary', 'desc');
+}
+    
+    public function variables(): HasMany
+    {
+        return $this->hasMany(Variable::class, 'dataset_id', 'dataset_id')
+            ->where('is_visible', true)
+            ->orderBy('display_order');
     }
-
-    public function papers(): BelongsToMany {
-        return $this->belongsToMany(Paper::class, 'dataset_papers', 'dataset_id', 'paper_id')
-            ->withPivot('citation_type', 'is_primary', 'created_at');
+    
+// ✅ keywords() - tidak perlu ordering khusus
+public function keywords(): BelongsToMany
+{
+    return $this->belongsToMany(Keyword::class, 'dataset_keywords', 'dataset_id', 'keyword_id')
+        ->withTimestamps();
+}
+/**
+ * Papers relationship
+ */
+public function papers(): BelongsToMany
+{
+    return $this->belongsToMany(
+        Paper::class, 
+        'dataset_papers', 
+        'dataset_id', 
+        'paper_id'
+    )
+    ->withPivot('citation_type', 'is_primary', 'created_at')
+    // ✅ BENAR: Gunakan orderByPivot() atau nama tabel langsung
+    ->orderByPivot('is_primary', 'desc')
+    ->orderByPivot('created_at', 'desc');
+    // ❌ JANGAN pakai: ->orderBy('pivot.is_primary', 'desc')
+}
+// ✅ contributors() - pastikan benar
+public function contributors(): BelongsToMany
+{
+    return $this->belongsToMany(Person::class, 'dataset_contributors', 'dataset_id', 'person_id')
+        ->withPivot('contribution_role', 'display_order', 'created_at')
+        ->orderByPivot('display_order');
+}
+    
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class, 'dataset_id', 'dataset_id')
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
+            ->orderBy('created_at', 'desc');
     }
-
-    // Keywords via JSON (tidak ada pivot table di schema)
-    public function getKeywordsAttribute() {
-        $additional = json_decode($this->additional_info ?? '{}', true);
-        $names = $additional['keywords'] ?? [];
-        return Keyword::whereIn('keyword_name', $names)->get();
+    
+    public function downloads(): HasMany
+    {
+        return $this->hasMany(Download::class, 'dataset_id', 'dataset_id');
     }
-
-    /* ACCESSORS */
-    protected function citation(): Attribute {
-        return Attribute::make(get: fn() => $this->generateCitation());
+    
+    // === ACCESSORS ===
+    
+    public function getUrlAttribute(): string
+    {
+        return route('datasets.show', [$this, $this->slug]);
     }
-    private function generateCitation(): string {
-        $creators = $this->creators->pluck('name')->join(', ');
-        $year = $this->donated_date?->year ?? date('Y');
-        $doiString = $this->doi?->doi_string;
-        $doiLink = $doiString ? " https://doi.org/{$doiString}" : '';
-        return "{$creators} ({$year}). {$this->name} [Dataset]. UCI Machine Learning Repository.{$doiLink}";
+    
+    public function getThumbnailAttribute(): ?string
+    {
+        if ($this->thumbnail_url) return $this->thumbnail_url;
+        
+        $primaryImage = $this->images->where('pivot.is_primary', true)->first();
+        if ($primaryImage) {
+            return Storage::url($primaryImage->file_path);
+        }
+        
+        return null;
     }
-    protected function donatedDateFormatted(): Attribute {
-        return Attribute::make(get: fn() => $this->donated_date?->format('n/j/Y') ?? 'N/A');
+    
+    public function getDefaultFile(): ?File
+    {
+        return $this->files->where('pivot.is_default', true)->first() 
+            ?? $this->files->first();
     }
-    protected function statusBadgeClass(): Attribute {
-        return Attribute::make(get: fn() => match($this->status ?? 'pending') {
-            'approved' => 'success', 'rejected' => 'danger', default => 'warning',
+    
+    // === SCOPES FOR FILTERING ===
+    
+    public function scopeApproved(Builder $query): Builder
+    {
+        return $query->where('status', 'available');
+    }
+    
+    public function scopeSearch(Builder $query, ?string $search): Builder
+    {
+        if (!$search) return $query;
+        
+        return $query->where(function($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('display_name', 'like', "%{$search}%")
+              ->orWhere('description', 'like', "%{$search}%")
+              ->orWhere('abstract', 'like', "%{$search}%")
+              ->orWhere('subject_area', 'like', "%{$search}%")
+              ->orWhere('domain', 'like', "%{$search}%");
         });
     }
-    protected function shortDescription(): Attribute {
-        return Attribute::make(get: fn() => Str::limit($this->description, 200));
+    
+    public function scopeFilterByDataType(Builder $query, ?string $dataType): Builder
+    {
+        return $dataType ? $query->where('data_type', $dataType) : $query;
     }
-    protected function slug(): Attribute {
-        return Attribute::make(get: fn() => Str::slug($this->name));
+    
+    public function scopeFilterByTaskType(Builder $query, ?string $taskType): Builder
+    {
+        return $taskType ? $query->where('task_type', $taskType) : $query;
     }
-
-    /* SCOPES */
-    public function scopePublished($query) { return $query->where('status', 'approved'); }
-    public function scopePending($query) { return $query->where('status', 'pending'); }
-    public function scopeRejected($query) { return $query->where('status', 'rejected'); }
-    public function scopeSearch($query, ?string $keyword) {
-        if (!$keyword) return $query;
-        return $query->where(function($q) use ($keyword) {
-            $q->where('name', 'LIKE', "%{$keyword}%")->orWhere('description', 'LIKE', "%{$keyword}%");
+    
+    public function scopeFilterBySubjectArea(Builder $query, ?array $areas): Builder
+    {
+        if (!$areas || empty($areas)) return $query;
+        
+        return $query->whereIn('subject_area', $areas);
+    }
+    
+    public function scopeFilterByDomain(Builder $query, ?array $domains): Builder
+    {
+        if (!$domains || empty($domains)) return $query;
+        
+        return $query->whereIn('domain', $domains);
+    }
+    
+    public function scopeFilterByKeywords(Builder $query, ?array $keywordIds): Builder
+    {
+        if (!$keywordIds || empty($keywordIds)) return $query;
+        
+        return $query->whereHas('keywords', function($q) use ($keywordIds) {
+            $q->whereIn('keywords.keyword_id', $keywordIds);
         });
     }
-    public function scopeWithTask($query, $taskId) { return $taskId ? $query->where('task_id', $taskId) : $query; }
-    public function scopeWithSubjectArea($query, $areaId) { return $areaId ? $query->where('subject_area_id', $areaId) : $query; }
-    public function scopeWithDataType($query, ?string $dataType) { return $dataType ? $query->where('data_type', 'LIKE', "%{$dataType}%") : $query; }
-    public function scopeWithInstancesRange($query, ?int $min, ?int $max) {
+    
+    public function scopeFilterByInstances(Builder $query, ?int $min, ?int $max): Builder
+    {
         if ($min !== null) $query->where('num_instances', '>=', $min);
         if ($max !== null) $query->where('num_instances', '<=', $max);
         return $query;
     }
-    public function scopeWithFeaturesRange($query, ?int $min, ?int $max) {
+    
+    public function scopeFilterByFeatures(Builder $query, ?int $min, ?int $max): Builder
+    {
         if ($min !== null) $query->where('num_features', '>=', $min);
         if ($max !== null) $query->where('num_features', '<=', $max);
         return $query;
     }
-    public function scopeOrderByPopular($query, $dir = 'desc') { return $query->orderBy('view_count', $dir); }
-    public function scopeOrderByDownloads($query, $dir = 'desc') { return $query->orderBy('download_count', $dir); }
-    public function scopeOrderByCitations($query, $dir = 'desc') { return $query->orderBy('citation_count', $dir); }
-    public function scopeOrderByRecent($query, $dir = 'desc') { return $query->orderBy('donated_date', $dir); }
-    public function scopeOrderByName($query, $dir = 'asc') { return $query->orderBy('name', $dir); }
+    
+    public function scopeFilterByVariableTypes(Builder $query, ?array $types): Builder
+    {
+        if (!$types || empty($types)) return $query;
+        
+        return $query->whereHas('variables', function($q) use ($types) {
+            $q->whereIn('variable_type', $types);
+        });
+    }
+    
+    public function scopeFilterByHasMissing(Builder $query, ?bool $hasMissing): Builder
+    {
+        if ($hasMissing === null) return $query;
+        return $query->where('has_missing_values', $hasMissing);
+    }
+    
+    public function scopeFilterByStatus(Builder $query, ?array $statuses): Builder
+    {
+        if (!$statuses || empty($statuses)) return $query->where('status', 'available');
+        return $query->whereIn('status', $statuses);
+    }
+    
+    public function scopeSortBy(Builder $query, ?string $sort, ?string $order): Builder
+    {
+        $order = strtolower($order) === 'asc' ? 'asc' : 'desc';
+        
+        return match ($sort) {
+            'name' => $query->orderBy('name', $order),
+            'num_instances' => $query->orderBy('num_instances', $order)->orderBy('name'),
+            'num_features' => $query->orderBy('num_features', $order)->orderBy('name'),
+            'donated_date' => $query->orderBy('donated_date', $order)->orderBy('name'),
+            'created_at' => $query->orderBy('created_at', $order)->orderBy('name'),
+            'download_count' => $query->orderBy('download_count', $order)->orderBy('name'),
+            'citation_count' => $query->orderBy('citation_count', $order)->orderBy('name'),
+            default => $query->orderBy('view_count', $order)->orderBy('name'),
+        };
+    }
+    
+    // === HELPER METHODS ===
+    
+    public function incrementView(): void
+    {
+        $this->increment('view_count');
+    }
+    
+    public function incrementDownload(?File $file = null, ?User $user = null): void
+    {
+        $this->increment('download_count');
+        
+        Download::create([
+            'dataset_id' => $this->dataset_id,
+            'file_id' => $file?->file_id,
+            'user_id' => $user?->id,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
+    }
+    
+    /**
+ * Generate BibTeX citation string
+ */
+public function getCitationBibTeX(): string
+{
+    $authors = $this->contributors
+        ->where('pivot.contribution_role', 'creator')
+        ->pluck('name')
+        ->join(', ');
+    
+    $authorString = !empty($authors) ? $authors : 'Dataset Contributors';
+    $doiLine = $this->doi ? "  doi = {{$this->doi->doi_string}}," . PHP_EOL : '';
+    $accessDate = date('Y-m-d');
+    
+    return "@dataset{$this->dataset_id}," . PHP_EOL .
+           "  title = {{$this->name}}," . PHP_EOL .
+           "  author = {{$authorString}}," . PHP_EOL .
+           "  year = {{$this->created_at->year}}," . PHP_EOL .
+           "  url = {{$this->url}}," . PHP_EOL .
+           $doiLine .
+           "  note = {Accessed: {$accessDate}}" . PHP_EOL .
+           "}" . PHP_EOL;
+}
+// Di dalam class Dataset:
 
-    /* HELPERS */
-    public function getIconClass(): string {
-        $name = strtolower($this->name);
-        $type = strtolower($this->data_type ?? '');
-        if (Str::contains($name, 'iris')) return 'bi-flower1';
-        elseif (Str::contains($name, 'heart') || Str::contains($name, 'cardio')) return 'bi-heart-pulse';
-        elseif (Str::contains($name, 'sound') || Str::contains($name, 'audio')) return 'bi-volume-up';
-        elseif (Str::contains($name, 'image') || Str::contains($name, 'vision')) return 'bi-image';
-        elseif (Str::contains($name, 'text') || Str::contains($name, 'nlp')) return 'bi-chat-square-text';
-        elseif (Str::contains($name, 'time') || Str::contains($name, 'series')) return 'bi-graph-up';
-        if (Str::contains($type, 'image')) return 'bi-image';
-        elseif (Str::contains($type, 'text')) return 'bi-chat-square-text';
-        elseif (Str::contains($type, 'time-series') || Str::contains($type, 'sequential')) return 'bi-graph-up';
-        elseif (Str::contains($type, 'tabular') || Str::contains($type, 'multivariate')) return 'bi-table';
-        return 'bi-database';
-    }
-    public function hasDownloadableFiles(): bool {
-        return $this->files->contains(fn($f) => in_array(strtolower($f->file_format), ['csv','arff','txt','json','zip']));
-    }
-    public function getPrimaryFile() { return $this->files->firstWhere('is_default', true) ?? $this->files->first(); }
-    public function getPrimaryFileSize(): string { $f = $this->getPrimaryFile(); return $f ? $f->file_size : 'N/A'; }
-    public function isPublished(): bool { return $this->status === 'approved'; }
-    public function isPending(): bool { return $this->status === 'pending'; }
-    public function isRejected(): bool { return $this->status === 'rejected'; }
-    public function getDescriptiveInfo(string $key, $default = null) {
-        $add = $this->additional_info ?? [];
-        $desc = is_array($add) ? ($add['descriptive'] ?? []) : [];
-        return $desc[$key] ?? $default;
-    }
-    public function getFilesCount(): int { return $this->files->count(); }
-    public function getVariablesCount(): int { return $this->variables->count(); }
-    public function getDownloadUrl(): ?string { $f = $this->getPrimaryFile(); return $f ? route('datasets.download', [$this, $f]) : null; }
-    public function incrementViewCount(): void { $this->increment('view_count'); }
-    public function incrementDownloadCount(): void { $this->increment('download_count'); }
-    public function incrementCitationCount(): void { $this->increment('citation_count'); }
-    public function approvedByUser() { return $this->approved_by ? \App\Models\User::find($this->approved_by) : null; }
-    public function rejectedByUser() { return $this->rejected_by ? \App\Models\User::find($this->rejected_by) : null; }
-    public function isCreator(\App\Models\User $user): bool {
-        return $this->user_id === $user->id || $this->creators->contains(fn($c) => $c->email === $user->email || $c->name === $user->name);
-    }
-    public function getUrl(): string { return route('datasets.show', $this); }
-    public function getEditUrl(): ?string { return null; }
-    protected static function boot() {
-        parent::boot();
-        static::updating(fn($d) => $d->last_updated = now());
-    }
+public function task(): BelongsTo
+{
+    return $this->belongsTo(Task::class, 'task_id', 'task_id');
+}
+
+public function subjectArea(): BelongsTo
+{
+    return $this->belongsTo(SubjectArea::class, 'subject_area_id', 'area_id');
+}
+
+// Accessor untuk backward compatibility dengan field lama:
+public function getTaskTypeAttribute($value)
+{
+    // Prioritaskan relationship jika ada, fallback ke enum field
+    return $this->task?->task_name ?? $value;
+}
+
+public function getSubjectAreaAttribute($value)
+{
+    return $this->subjectArea?->area_name ?? $value;
+}
 }

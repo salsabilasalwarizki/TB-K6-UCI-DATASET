@@ -46,5 +46,10 @@ class DatabaseSeeder extends Seeder
         // ✅ KEYWORDS
         collect(['ecology', 'image', 'text', 'time-series', 'sensor', 'finance'])
             ->each(fn($k) => Keyword::firstOrCreate(['keyword_name' => $k]));
+
+        $this->call([
+        // ... seeders lainnya
+        UciDatasetSeeder::class,
+    ]);
     }
 }

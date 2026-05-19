@@ -10,9 +10,11 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "doctrine/dbal": "^4.4",
         "laravel/framework": "^12.0",
         "laravel/socialite": "*",
         "laravel/tinker": "^2.10.1",
+        "league/csv": "^9.28",
         "maatwebsite/excel": "^1.1"
     },
     "require-dev": {
@@ -89,6 +91,8 @@
             "php-http/discovery": true
         }
     },
+    
     "minimum-stability": "stable",
     "prefer-stable": true
+    
 }

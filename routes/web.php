@@ -37,7 +37,22 @@ Route::get('/datasets/{dataset}', [DatasetController::class, 'show'])->name('dat
 Route::get('/datasets/{dataset}/files/{file}/download', [DatasetController::class, 'download'])
      ->name('datasets.download')
      ->middleware('throttle:30,1'); // Rate limit: 30 downloads per minute
-
+// ===== 📊 DATASET TRACKING & INTERACTION ROUTES =====
+Route::prefix('datasets')->name('datasets.')->group(function() {
+    // Track view (AJAX endpoint)
+    Route::post('/{dataset}/track-view', [DatasetController::class, 'trackView'])
+        ->name('track-view')
+        ->middleware('throttle:60,1'); // Max 60 requests per minute per IP
+    
+    // Save to collection (requires auth)
+    Route::post('/{dataset}/save', [DatasetController::class, 'save'])
+        ->name('save')
+        ->middleware(['auth', 'throttle:30,1']);
+    
+    // Quick preview API (optional)
+    Route::get('/{dataset}/preview', [DatasetController::class, 'preview'])
+        ->name('preview');
+});
 // Search (redirect to datasets with query params)
 Route::get('/search', function (\Illuminate\Http\Request $request) {
     return redirect()->route('datasets.index', $request->only('q', 'task', 'area', 'instances'));

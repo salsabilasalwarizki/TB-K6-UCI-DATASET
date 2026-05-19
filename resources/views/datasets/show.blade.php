@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', $dataset->name)
+@section('title', $dataset->display_name ?? $dataset->name)
 
 @section('content')
 <div class="container-fluid py-4">
@@ -11,15 +11,20 @@
                 <div class="card-body">
                     <div class="row align-items-center">
                         <div class="col-md-10">
-                            <h1 class="h2 mb-2">{{ $dataset->name }}</h1>
+                            <h1 class="h2 mb-2">{{ $dataset->display_name ?? $dataset->name }}</h1>
                             <p class="mb-0 opacity-75">
                                 <i class="bi bi-calendar me-1"></i>
                                 Donated on {{ $dataset->donated_date?->format('n/j/Y') ?? 'N/A' }}
                             </p>
                         </div>
                         <div class="col-md-2 text-md-end mt-3 mt-md-0">
-                            @if($dataset->files->first())
-                            <img src="{{ asset('storage/' . $dataset->files->first()->filename) }}" 
+                            @if($dataset->thumbnail_url)
+                            <img src="{{ $dataset->thumbnail_url }}" 
+                                 alt="{{ $dataset->name }}" 
+                                 class="img-fluid rounded"
+                                 style="max-height: 100px; max-width: 150px;">
+                            @elseif($dataset->large_image_url)
+                            <img src="{{ $dataset->large_image_url }}" 
                                  alt="{{ $dataset->name }}" 
                                  class="img-fluid rounded"
                                  style="max-height: 100px; max-width: 150px;">
@@ -32,7 +37,10 @@
             <!-- Abstract/Description -->
             <div class="card mb-4">
                 <div class="card-body">
-                    <p class="card-text">{{ $dataset->description }}</p>
+                    <p class="card-text">{{ $dataset->abstract ?? $dataset->description }}</p>
+                    @if($dataset->summary)
+                    <p class="card-text mt-3"><strong>Summary:</strong> {{ $dataset->summary }}</p>
+                    @endif
                 </div>
             </div>
 
@@ -42,7 +50,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <h6 class="text-primary mb-2">Dataset Characteristics</h6>
-                            <p class="mb-0">{{ $dataset->characteristics ?? 'N/A' }}</p>
+                            <p class="mb-0">{{ $dataset->data_type ?? 'N/A' }}</p>
                         </div>
                     </div>
                 </div>
@@ -50,7 +58,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <h6 class="text-primary mb-2">Subject Area</h6>
-                            <p class="mb-0">{{ $dataset->subjectArea->area_name ?? 'N/A' }}</p>
+                            <p class="mb-0">{{ $dataset->subject_area ?? 'N/A' }}</p>
                         </div>
                     </div>
                 </div>
@@ -58,15 +66,15 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <h6 class="text-primary mb-2">Associated Tasks</h6>
-                            <p class="mb-0">{{ $dataset->task->task_name ?? 'N/A' }}</p>
+                            <p class="mb-0">{{ $dataset->task_type ?? 'N/A' }}</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4 mb-3">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h6 class="text-primary mb-2">Feature Type</h6>
-                            <p class="mb-0">{{ $dataset->feature_type ?? 'N/A' }}</p>
+                            <h6 class="text-primary mb-2">Domain</h6>
+                            <p class="mb-0">{{ $dataset->domain ?? 'N/A' }}</p>
                         </div>
                     </div>
                 </div>
@@ -86,91 +94,82 @@
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Dataset Information -->
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">
-                        <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#datasetInfo">
-                            Dataset Information <i class="bi bi-chevron-down ms-1"></i>
-                        </button>
-                    </h5>
-                </div>
-                <div id="datasetInfo" class="collapse show">
-                    <div class="card-body">
-                        @php
-                            $additionalInfo = json_decode($dataset->additional_info ?? '{}', true) ?? [];
-                            $descriptiveInfo = $additionalInfo['descriptive'] ?? [];
-                        @endphp
-                        
-                        @if(!empty($descriptiveInfo['instances_represent']))
-                        <div class="mb-3">
-                            <h6 class="fw-bold">What do the instances in this dataset represent?</h6>
-                            <p>{{ $descriptiveInfo['instances_represent'] }}</p>
+                @if($dataset->num_classes)
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h6 class="text-primary mb-2"># Classes</h6>
+                            <p class="mb-0">{{ number_format($dataset->num_classes) }}</p>
                         </div>
-                        @endif
-                        
-                        @if(!empty($descriptiveInfo['purpose']) || !empty($additionalInfo['variable_info']))
-                        <div class="mb-3">
-                            <h6 class="fw-bold">Additional Information</h6>
-                            <p>{{ $descriptiveInfo['purpose'] ?? $additionalInfo['variable_info'] }}</p>
-                        </div>
-                        @endif
-                        
-                        <div class="mb-3">
-                            <h6 class="fw-bold">Has Missing Values?</h6>
-                            <p>{{ $dataset->has_missing_values ? 'Yes' : 'No' }}</p>
-                        </div>
-                        
-                        @if(!empty($descriptiveInfo['data_splits']))
-                        <div class="mb-3">
-                            <h6 class="fw-bold">Recommended Data Splits</h6>
-                            <p>{{ $descriptiveInfo['data_splits'] }}</p>
-                        </div>
-                        @endif
-                        
-                        @if(!empty($descriptiveInfo['sensitive_data']))
-                        <div class="mb-3">
-                            <h6 class="fw-bold">Sensitive Data</h6>
-                            <p>{{ $descriptiveInfo['sensitive_data'] }}</p>
-                        </div>
-                        @endif
                     </div>
                 </div>
+                @endif
             </div>
 
-            <!-- Introductory Paper -->
-            @if($dataset->papers->isNotEmpty())
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">
-                        <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#paperSection">
-                            Introductory Paper <i class="bi bi-chevron-down ms-1"></i>
-                        </button>
-                    </h5>
-                </div>
-                <div id="paperSection" class="collapse show">
-                    <div class="card-body">
-                        @foreach($dataset->papers as $paper)
-                        <div class="mb-3">
-                            @if($paper->paper_url)
-                            <h6>
-                                <a href="{{ $paper->paper_url }}" target="_blank" class="text-decoration-none">
-                                    {{ $paper->title }}
-                                </a>
-                            </h6>
-                            @else
-                            <h6>{{ $paper->title }}</h6>
-                            @endif
-                            <p class="mb-1 text-muted">By {{ $paper->authors }}</p>
-                            <p class="mb-0 small">Published in {{ $paper->venue ?? 'N/A' }}, {{ $paper->publication_year }}</p>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
+<!-- Dataset Information Section -->
+@if($dataset->descriptionDetails)  {{-- ← FIX: singular, nama relationship --}}
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">
+            <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#datasetInfo">
+                Dataset Information <i class="bi bi-chevron-down ms-1"></i>
+            </button>
+        </h5>
+    </div>
+    <div id="datasetInfo" class="collapse show">
+        <div class="card-body">
+            
+            @if($dataset->descriptionDetails->instances_represent)
+            <div class="mb-3">
+                <h6 class="fw-bold">What do the instances represent?</h6>
+                <p>{{ $dataset->descriptionDetails->instances_represent }}</p>
             </div>
             @endif
+            
+            @if($dataset->descriptionDetails->purpose)
+            <div class="mb-3">
+                <h6 class="fw-bold">Purpose</h6>
+                <p>{{ $dataset->descriptionDetails->purpose }}</p>
+            </div>
+            @endif
+            
+            @if($dataset->descriptionDetails->funding)
+            <div class="mb-3">
+                <h6 class="fw-bold">Funding</h6>
+                <p>{{ $dataset->descriptionDetails->funding }}</p>
+            </div>
+            @endif
+            
+            <div class="mb-3">
+                <h6 class="fw-bold">Has Missing Values?</h6>
+                <p>{{ $dataset->has_missing_values ? 'Yes' : 'No' }}</p>
+            </div>
+            
+            @if($dataset->descriptionDetails->data_splits)
+            <div class="mb-3">
+                <h6 class="fw-bold">Recommended Data Splits</h6>
+                <p>{{ $dataset->descriptionDetails->data_splits }}</p>
+            </div>
+            @endif
+            
+            @if($dataset->descriptionDetails->sensitive_data)
+            <div class="mb-3">
+                <h6 class="fw-bold">Sensitive Data</h6>
+                <p>{{ $dataset->descriptionDetails->sensitive_data }}</p>
+            </div>
+            @endif
+            
+            @if($dataset->descriptionDetails->additional_info)
+            <div class="mb-3">
+                <h6 class="fw-bold">Additional Information</h6>
+                <p>{{ $dataset->descriptionDetails->additional_info }}</p>
+            </div>
+            @endif
+            
+        </div>
+    </div>
+</div>
+@endif
 
             <!-- Variables Table -->
             @if($dataset->variables->isNotEmpty())
@@ -193,23 +192,78 @@
                                         <th>Type</th>
                                         <th>Description</th>
                                         <th>Units</th>
+                                        <th>Min Value</th>
+                                        <th>Max Value</th>
                                         <th>Missing Values</th>
+                                        <th>Unique Values</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($dataset->variables as $var)
                                     <tr>
-                                        <td><strong>{{ $var->variable_name }}</strong></td>
-                                        <td><span class="badge bg-info">{{ $var->role }}</span></td>
-                                        <td>{{ $var->type }}</td>
+                                        <td><strong>{{ $var->display_name ?? $var->variable_name }}</strong></td>
+                                        <td><span class="badge bg-info">{{ ucfirst($var->role) }}</span></td>
+                                        <td>{{ $var->variable_type }}</td>
                                         <td>{{ $var->description ?? '-' }}</td>
-                                        <td>{{ $var->units ?? '-' }}</td>
-                                        <td>{{ $var->has_missing ? 'Yes' : 'No' }}</td>
+                                        <td>{{ $var->unit ?? '-' }}</td>
+                                        <td>{{ $var->min_value ?? '-' }}</td>
+                                        <td>{{ $var->max_value ?? '-' }}</td>
+                                        <td>{{ $var->missing_count > 0 ? $var->missing_count : 'No' }}</td>
+                                        <td>{{ $var->unique_count ?? '-' }}</td>
                                     </tr>
+                                    @if($var->variable_type === 'Categorical' && $var->categories->isNotEmpty())
+                                    <tr class="table-light">
+                                        <td colspan="9">
+                                            <small class="text-muted"><strong>Categories:</strong> 
+                                            @foreach($var->categories as $index => $cat)
+                                                {{ $cat->category_label ?? $cat->category_value }}@if(!$loop->last), @endif
+                                            @endforeach
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    @endif
                                     @endforeach
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            <!-- Introductory Paper -->
+            @php
+                $introductoryPapers = $dataset->papers->where('pivot.citation_type', 'introductory')->take(1);
+            @endphp
+            @if($introductoryPapers->isNotEmpty())
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#paperSection">
+                            Introductory Paper <i class="bi bi-chevron-down ms-1"></i>
+                        </button>
+                    </h5>
+                </div>
+                <div id="paperSection" class="collapse show">
+                    <div class="card-body">
+                        @foreach($introductoryPapers as $paper)
+                        <div class="mb-3">
+                            @if($paper->url)
+                            <h6>
+                                <a href="{{ $paper->url }}" target="_blank" class="text-decoration-none">
+                                    {{ $paper->title }}
+                                </a>
+                            </h6>
+                            @else
+                            <h6>{{ $paper->title }}</h6>
+                            @endif
+                            <p class="mb-1 text-muted">By {{ $paper->authors }}</p>
+                            <p class="mb-0 small">Published in {{ $paper->venue ?? 'N/A' }}, {{ $paper->publication_year }}</p>
+                            @if($paper->abstract)
+                            <p class="mt-2 small">{{ Str::limit($paper->abstract, 200) }}</p>
+                            @endif
+                        </div>
+                        @endforeach
                     </div>
                 </div>
             </div>
@@ -231,19 +285,23 @@
                             <thead>
                                 <tr>
                                     <th>File</th>
-                                    <th>Size</th>
                                     <th>Format</th>
+                                    <th>Size</th>
+                                    <th>Role</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach($dataset->files as $file)
                                 <tr>
-                                    <td>{{ $file->original_filename }}</td>
-                                    <td>{{ $file->file_size }}</td>
+                                    <td>{{ $file->original_filename ?? $file->filename }}</td>
                                     <td><span class="badge bg-secondary">{{ strtoupper($file->file_format) }}</span></td>
+                                    <td>{{ $file->file_size_bytes ? number_format($file->file_size_bytes / 1024, 2) . ' KB' : 'N/A' }}</td>
+                                    <td><span class="badge bg-light text-dark border">{{ ucfirst($file->pivot->file_role ?? 'data') }}</span></td>
                                     <td>
-                                        <a href="{{ route('datasets.download', [$dataset, $file]) }}" class="btn btn-sm btn-outline-primary">
+                                        <a href="{{ asset('storage/' . $file->file_path) }}" 
+                                           class="btn btn-sm btn-outline-primary" 
+                                           download>
                                             <i class="bi bi-download"></i> Download
                                         </a>
                                     </td>
@@ -257,21 +315,24 @@
             @endif
 
             <!-- Papers Citing this Dataset -->
+            @php
+                $citingPapers = $dataset->papers->where('pivot.citation_type', 'citing')->sortByDesc('publication_year');
+            @endphp
             <div class="card mb-4">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Papers Citing this Dataset</h5>
-                    <button class="btn btn-sm btn-primary">
+                    <h5 class="mb-0">Papers Citing this Dataset ({{ $citingPapers->count() }})</h5>
+                    <button class="btn btn-sm btn-primary" onclick="sortPapers()">
                         <i class="bi bi-funnel me-1"></i>SORT BY YEAR, DESC
                     </button>
                 </div>
                 <div class="card-body">
-                    @if($dataset->papers->isNotEmpty())
-                    <div class="list-group">
-                        @foreach($dataset->papers as $paper)
+                    @if($citingPapers->isNotEmpty())
+                    <div class="list-group" id="papersList">
+                        @foreach($citingPapers->take(5) as $paper)
                         <div class="list-group-item list-group-item-action">
-                            @if($paper->paper_url)
+                            @if($paper->url)
                             <h6>
-                                <a href="{{ $paper->paper_url }}" target="_blank" class="text-decoration-none">
+                                <a href="{{ $paper->url }}" target="_blank" class="text-decoration-none">
                                     {{ $paper->title }}
                                 </a>
                             </h6>
@@ -280,6 +341,9 @@
                             @endif
                             <p class="mb-1 text-muted small">By {{ $paper->authors }}</p>
                             <p class="mb-0 small">Published in {{ $paper->venue ?? 'ArXiv' }}, {{ $paper->publication_year }}</p>
+                            @if($paper->doi)
+                            <p class="mb-0 small text-primary">DOI: {{ $paper->doi }}</p>
+                            @endif
                         </div>
                         @endforeach
                     </div>
@@ -288,18 +352,20 @@
                     <div class="mt-3 d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-2">
                             <span class="small text-muted">Rows per page:</span>
-                            <select class="form-select form-select-sm" style="width: auto;">
-                                <option>5</option>
-                                <option>10</option>
-                                <option>20</option>
+                            <select class="form-select form-select-sm" style="width: auto;" onchange="changePageSize(this.value)">
+                                <option value="5" {{ $citingPapers->count() <= 5 ? 'selected' : '' }}>5</option>
+                                <option value="10" {{ $citingPapers->count() > 5 && $citingPapers->count() <= 10 ? 'selected' : '' }}>10</option>
+                                <option value="20">20</option>
                             </select>
-                            <span class="small text-muted">0 to 5 of {{ $dataset->papers->count() }}</span>
+                            <span class="small text-muted">0 to {{ min(5, $citingPapers->count()) }} of {{ $citingPapers->count() }}</span>
                         </div>
                         <nav>
                             <ul class="pagination pagination-sm mb-0">
                                 <li class="page-item disabled"><a class="page-link" href="#">‹</a></li>
                                 <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                @if($citingPapers->count() > 5)
                                 <li class="page-item"><a class="page-link" href="#">›</a></li>
+                                @endif
                             </ul>
                         </nav>
                     </div>
@@ -308,6 +374,67 @@
                     @endif
                 </div>
             </div>
+
+            <!-- Related Papers -->
+            @php
+                $relatedPapers = $dataset->papers->where('pivot.citation_type', 'related');
+            @endphp
+            @if($relatedPapers->isNotEmpty())
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Related Papers</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        @foreach($relatedPapers->take(3) as $paper)
+                        <div class="list-group-item list-group-item-action">
+                            <h6>{{ $paper->title }}</h6>
+                            <p class="mb-1 text-muted small">By {{ $paper->authors }}</p>
+                            <p class="mb-0 small">{{ $paper->venue ?? 'N/A' }}, {{ $paper->publication_year }}</p>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            <!-- Reviews Section -->
+            @if($dataset->reviews->isNotEmpty())
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">User Reviews ({{ $dataset->reviews->count() }})</h5>
+                </div>
+                <div class="card-body">
+                    @foreach($dataset->reviews->take(5) as $review)
+                    <div class="mb-3 border-bottom pb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">{{ $review->title ?? 'Untitled Review' }}</h6>
+                            <div class="text-warning">
+                                @for($i = 1; $i <= 5; $i++)
+                                    <i class="bi bi-star{{ $i <= $review->rating ? '-fill' : '' }}"></i>
+                                @endfor
+                                <span class="text-muted ms-1">({{ number_format($review->rating, 1) }})</span>
+                            </div>
+                        </div>
+                        <p class="mb-1">{{ $review->content }}</p>
+                        @if($review->pros)
+                        <p class="mb-1 small text-success"><strong>Pros:</strong> {{ $review->pros }}</p>
+                        @endif
+                        @if($review->cons)
+                        <p class="mb-1 small text-danger"><strong>Cons:</strong> {{ $review->cons }}</p>
+                        @endif
+                        <small class="text-muted">
+                            By {{ $review->user->name ?? 'Anonymous' }} 
+                            on {{ $review->created_at->format('M d, Y') }}
+                            @if($review->is_verified)
+                            <span class="badge bg-success ms-1">Verified</span>
+                            @endif
+                        </small>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+            @endif
         </div>
 
         <!-- Sidebar -->
@@ -315,16 +442,20 @@
             <!-- Action Buttons -->
             <div class="card mb-4">
                 <div class="card-body">
-                    @if($dataset->files->first())
-                    <a href="{{ route('datasets.download', [$dataset, $dataset->files->first()]) }}" 
-                       class="btn btn-primary w-100 mb-2">
-                        <i class="bi bi-download me-2"></i>DOWNLOAD ({{ $dataset->files->first()->file_size }})
+                    @php
+                        $defaultFile = $dataset->files->where('pivot.is_default', 1)->first() ?? $dataset->files->first();
+                    @endphp
+                    @if($defaultFile)
+                    <a href="{{ asset('storage/' . $defaultFile->file_path) }}" 
+                       class="btn btn-primary w-100 mb-2"
+                       download>
+                        <i class="bi bi-download me-2"></i>DOWNLOAD ({{ $defaultFile->file_size_bytes ? number_format($defaultFile->file_size_bytes / 1024, 2) . ' KB' : 'N/A' }})
                     </a>
                     @endif
-                    <button class="btn btn-outline-primary w-100 mb-2">
+                    <button class="btn btn-outline-primary w-100 mb-2" onclick="importInPython()">
                         <i class="bi bi-code-slash me-2"></i>IMPORT IN PYTHON
                     </button>
-                    <button class="btn btn-warning w-100 mb-3">
+                    <button class="btn btn-warning w-100 mb-3" onclick="showCitation()">
                         <i class="bi bi-quote me-2"></i>CITE
                     </button>
                     
@@ -332,8 +463,11 @@
                         <div class="d-flex justify-content-between mb-2">
                             <span><i class="bi bi-chat-quote me-2"></i>{{ number_format($dataset->citation_count ?? 0) }} citations</span>
                         </div>
-                        <div class="d-flex justify-content-between">
+                        <div class="d-flex justify-content-between mb-2">
                             <span><i class="bi bi-eye me-2"></i>{{ number_format($dataset->view_count ?? 0) }} views</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span><i class="bi bi-cloud-download me-2"></i>{{ number_format($dataset->download_count ?? 0) }} downloads</span>
                         </div>
                     </div>
                 </div>
@@ -348,7 +482,10 @@
                 <div class="card-body">
                     <div class="d-flex flex-wrap gap-2">
                         @foreach($dataset->keywords as $keyword)
-                        <span class="badge bg-light text-dark border">{{ $keyword->keyword_name }}</span>
+                        <a href="{{ route('datasets.index', ['keyword' => $keyword->slug]) }}" 
+                           class="badge bg-light text-dark border text-decoration-none">
+                            {{ $keyword->keyword_name }}
+                        </a>
                         @endforeach
                     </div>
                 </div>
@@ -356,21 +493,54 @@
             @endif
 
             <!-- Creators -->
-            @if($dataset->creators->isNotEmpty())
+            @php
+                $creators = $dataset->contributors->where('pivot.contribution_role', 'creator');
+            @endphp
+            @if($creators->isNotEmpty())
             <div class="card mb-4">
                 <div class="card-header bg-light">
                     <h6 class="mb-0">Creators</h6>
                 </div>
                 <div class="card-body">
-                    @foreach($dataset->creators as $creator)
+                    @foreach($creators as $creator)
                     <div class="mb-2">
                         <i class="bi bi-person me-1"></i>
                         <strong>{{ $creator->name }}</strong>
                         @if($creator->pivot->contribution_role)
-                        <span class="badge bg-secondary ms-1">{{ $creator->pivot->contribution_role }}</span>
+                        <span class="badge bg-secondary ms-1">{{ ucfirst($creator->pivot->contribution_role) }}</span>
                         @endif
                         @if($creator->affiliation)
                         <div class="small text-muted">{{ $creator->affiliation }}</div>
+                        @endif
+                        @if($creator->orcid)
+                        <div class="small">
+                            <a href="https://orcid.org/{{ $creator->orcid }}" target="_blank" class="text-decoration-none">
+                                <i class="bi bi-orcid"></i> {{ $creator->orcid }}
+                            </a>
+                        </div>
+                        @endif
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+            @endif
+
+            <!-- Contributors -->
+            @php
+                $otherContributors = $dataset->contributors->whereNotIn('pivot.contribution_role', ['creator']);
+            @endphp
+            @if($otherContributors->isNotEmpty())
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">Contributors</h6>
+                </div>
+                <div class="card-body">
+                    @foreach($otherContributors as $contributor)
+                    <div class="mb-2">
+                        <i class="bi bi-person me-1"></i>
+                        <strong>{{ $contributor->name }}</strong>
+                        @if($contributor->pivot->contribution_role)
+                        <span class="badge bg-secondary ms-1">{{ ucfirst($contributor->pivot->contribution_role) }}</span>
                         @endif
                     </div>
                     @endforeach
@@ -385,7 +555,9 @@
                     <h6 class="mb-0">DOI</h6>
                 </div>
                 <div class="card-body">
-                    <a href="{{ $dataset->doi->resolution_url }}" target="_blank" class="text-decoration-none">
+                    <a href="{{ $dataset->doi->resolution_url ?? 'https://doi.org/' . $dataset->doi->doi_string }}" 
+                       target="_blank" 
+                       class="text-decoration-none">
                         {{ $dataset->doi->doi_string }}
                     </a>
                 </div>
@@ -400,17 +572,115 @@
                 </div>
                 <div class="card-body">
                     <p class="mb-2 small">
-                        This dataset is licensed under a 
-                        <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">
-                            Creative Commons Attribution 4.0 International
-                        </a> (CC BY 4.0) license.
+                        @if($dataset->license->license_url)
+                        <a href="{{ $dataset->license->license_url }}" target="_blank">
+                            {{ $dataset->license->license_name }}
+                        </a>
+                        @else
+                        {{ $dataset->license->license_name }}
+                        @endif
                     </p>
-                    <p class="mb-0 small text-muted">
-                        This allows for the sharing and adaptation of the datasets for any purpose, provided that the appropriate credit is given.
-                    </p>
+                    @if($dataset->license->description)
+                    <p class="mb-0 small text-muted">{{ Str::limit($dataset->license->description, 150) }}</p>
+                    @endif
                 </div>
             </div>
             @endif
+
+            <!-- Dataset Status -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">Status</h6>
+                </div>
+                <div class="card-body">
+                    @php
+                        $statusColors = [
+                            'pending' => 'warning',
+                            'approved' => 'success',
+                            'rejected' => 'danger',
+                            'available' => 'primary',
+                            'deprecated' => 'secondary'
+                        ];
+                    @endphp
+                    <span class="badge bg-{{ $statusColors[$dataset->status] ?? 'secondary' }}">
+                        {{ ucfirst($dataset->status) }}
+                    </span>
+                    @if($dataset->approved_at)
+                    <div class="mt-2 small text-muted">
+                        Approved on {{ $dataset->approved_at->format('M d, Y') }}
+                    </div>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Additional Info -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">Dataset Details</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        @if($dataset->uci_id)
+                        <li class="mb-2">
+                            <small class="text-muted">UCI ID:</small><br>
+                            <strong>{{ $dataset->uci_id }}</strong>
+                        </li>
+                        @endif
+                        @if($dataset->dataset_url)
+                        <li class="mb-2">
+                            <small class="text-muted">Source URL:</small><br>
+                            <a href="{{ $dataset->dataset_url }}" target="_blank" class="text-decoration-none">
+                                View Original Source
+                            </a>
+                        </li>
+                        @endif
+                        <li class="mb-2">
+                            <small class="text-muted">Added:</small><br>
+                            <strong>{{ $dataset->created_at->format('M d, Y') }}</strong>
+                        </li>
+                        <li>
+                            <small class="text-muted">Last Updated:</small><br>
+                            <strong>{{ $dataset->updated_at->format('M d, Y') }}</strong>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Citation Modal -->
+<div class="modal fade" id="citationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cite this Dataset</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>BibTeX</h6>
+                <pre class="bg-light p-3 rounded"><code>@dataset{{ $dataset->dataset_id }},
+  title = { {{ $dataset->name }} },
+  @if($dataset->user)author = { {{ $dataset->user->name }} },
+  @endif
+  year = { {{ $dataset->created_at->year }} },
+  @if($dataset->doi)doi = { {{ $dataset->doi->doi_string }} },
+  @endif
+  url = { {{ route('datasets.show', $dataset) }} }
+}</code></pre>
+                
+                <h6 class="mt-3">APA Style</h6>
+                <p class="bg-light p-3 rounded">
+                    @if($dataset->user){{ $dataset->user->name }}@endif. 
+                    ({{ $dataset->created_at->year }}). 
+                    <em>{{ $dataset->name }}</em>. 
+                    @if($dataset->doi)https://doi.org/{{ $dataset->doi->doi_string }}@endif
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="copyCitation()">Copy BibTeX</button>
+            </div>
         </div>
     </div>
 </div>
@@ -429,12 +699,12 @@
     }
     
     .btn-link {
-        color: var(--uci-blue);
+        color: var(--uci-blue, #0077b6);
         font-weight: 600;
     }
     
     .btn-link:hover {
-        color: var(--uci-dark-blue);
+        color: var(--uci-dark-blue, #005f73);
     }
     
     .badge {
@@ -456,16 +726,159 @@
     
     .table th {
         font-weight: 600;
-        color: var(--uci-blue);
+        color: var(--uci-blue, #0077b6);
     }
     
     .pagination .page-link {
-        color: var(--uci-blue);
+        color: var(--uci-blue, #0077b6);
     }
     
     .pagination .page-item.active .page-link {
-        background-color: var(--uci-blue);
-        border-color: var(--uci-blue);
+        background-color: var(--uci-blue, #0077b6);
+        border-color: var(--uci-blue, #0077b6);
+    }
+    
+    pre code {
+        white-space: pre-wrap;
+        word-break: break-all;
     }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+function showCitation() {
+    const modal = new bootstrap.Modal(document.getElementById('citationModal'));
+    modal.show();
+}
+
+function copyCitation() {
+    const bibtex = `@dataset{{ $dataset->dataset_id }},
+  title = { {{ $dataset->name }} },
+  @if($dataset->user)author = { {{ $dataset->user->name }} },
+  @endif
+  year = { {{ $dataset->created_at->year }} },
+  @if($dataset->doi)doi = { {{ $dataset->doi->doi_string }} },
+  @endif
+  url = { {{ route('datasets.show', $dataset) }} }
+}`;
+    
+    navigator.clipboard.writeText(bibtex).then(() => {
+        alert('BibTeX citation copied to clipboard!');
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+    });
+}
+
+function importInPython() {
+    const code = `# Import the dataset
+import pandas as pd
+
+# Load the dataset
+df = pd.read_csv('{{ asset('storage/' . ($defaultFile->file_path ?? '')) }}')
+
+# Display basic information
+print(df.info())
+print(df.describe())`;
+    
+    navigator.clipboard.writeText(code).then(() => {
+        alert('Python import code copied to clipboard!');
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+    });
+}
+
+function sortPapers() {
+    // Implement sorting functionality
+    alert('Sorting papers by year (descending)');
+}
+
+function changePageSize(size) {
+    // Implement pagination functionality
+    console.log('Changing page size to:', size);
+}
+
+// Track dataset view
+document.addEventListener('DOMContentLoaded', function() {
+    // Send view tracking request
+    fetch('{{ route('datasets.track-view', $dataset) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    }).catch(err => console.error('Tracking error:', err));
+});
+// Track dataset view (with CSRF token)
+document.addEventListener('DOMContentLoaded', function() {
+    const datasetId = {{ $dataset->dataset_id }};
+    const trackUrl = "{{ route('datasets.track-view', $dataset) }}";
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content 
+        || document.querySelector('[name="_token"]')?.value;
+    
+    if (trackUrl && csrfToken) {
+        fetch(trackUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('View tracked:', data);
+            // Optional: update view count display
+            const viewCountEl = document.querySelector('[data-view-count]');
+            if (viewCountEl && data.views) {
+                viewCountEl.textContent = new Intl.NumberFormat().format(data.views);
+            }
+        })
+        .catch(err => {
+            console.warn('Tracking error (non-critical):', err);
+            // Fail silently - tracking is optional
+        });
+    }
+});
+
+// Save to collection handler
+function addToCollection(datasetId) {
+    const saveUrl = "{{ route('datasets.save', $dataset) }}";
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    
+    fetch(saveUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ action: 'add' })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Not authenticated');
+        return response.json();
+    })
+    .then(data => {
+        alert(data.message);
+        // Update button state
+        const btn = event.target.closest('button');
+        if (btn) {
+            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Saved';
+            btn.disabled = true;
+            btn.classList.replace('btn-outline-info', 'btn-info');
+        }
+    })
+    .catch(err => {
+        if (err.message === 'Not authenticated') {
+            window.location.href = "{{ route('login') }}?redirect=" + encodeURIComponent(window.location.href);
+        } else {
+            console.error('Save error:', err);
+            alert('Failed to save dataset');
+        }
+    });
+}
+</script>
+</script>
 @endpush

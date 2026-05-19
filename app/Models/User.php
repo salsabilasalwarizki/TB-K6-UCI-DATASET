@@ -49,4 +49,13 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    public function savedDatasets(): BelongsToMany
+{
+    return $this->belongsToMany(
+        Dataset::class, 
+        'user_saved_datasets', 
+        'user_id', 
+        'dataset_id'
+    )->withTimestamps();
+}
 }
