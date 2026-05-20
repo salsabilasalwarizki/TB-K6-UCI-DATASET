@@ -3,144 +3,118 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Dataset;
+use App\Models\{Dataset, User};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class DatasetReviewController extends Controller
 {
-    /**
-     * Show all datasets for review
-     */
+    // List Dataset dengan Filter
     public function index(Request $request)
     {
-        $query = Dataset::with(['creators', 'subjectArea', 'task', 'user']);
-        
-        // Filter by status
+        $query = Dataset::with(['contributors', 'user']);
+
+        // Filter Status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-        
+
         // Search
         if ($request->filled('search')) {
-            $query->where(function($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('description', 'like', '%' . $request->search . '%');
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                  ->orWhere('description', 'LIKE', "%{$search}%");
             });
         }
-        
-        // Sort
-        $sortBy = $request->get('sort', 'donated_date');
-        $sortOrder = $request->get('order', 'desc');
-        $query->orderBy($sortBy, $sortOrder);
-        
-        $datasets = $query->paginate(20);
-        
+
+        $datasets = $query->orderBy('created_at', 'desc')->paginate(20);
+
         return view('admin.datasets.index', compact('datasets'));
     }
 
-    /**
-     * Show dataset detail for review
-     */
-    public function show(Dataset $dataset)
+    // Detail Review Dataset
+    public function review($datasetId)
     {
-        $dataset->load([
-            'creators' => function($query) {
-                $query->withPivot('contribution_role');
-            },
-            'papers',
+        $dataset = Dataset::with([
+            'contributors', 
+            'variables', 
+            'files', 
             'keywords',
-            'files',
-            'variables',
-            'subjectArea',
-            'task',
-            'license',
-            'doi',
-            'user'
-        ]);
-        
-        // Parse additional info
-        $additionalInfo = json_decode($dataset->additional_info ?? '{}', true) ?? [];
-        
-        return view('admin.datasets.review', compact('dataset', 'additionalInfo'));
+            'papers',
+            'description'
+        ])->findOrFail($datasetId);
+
+        return view('admin.datasets.review', compact('dataset'));
     }
 
-    /**
-     * Approve dataset
-     */
-    public function approve(Dataset $dataset, Request $request)
+    // Approve Dataset
+    public function approve($datasetId, Request $request)
     {
-        $validated = $request->validate([
-            'admin_notes' => 'nullable|string|max:1000',
-        ]);
+        $dataset = Dataset::findOrFail($datasetId);
         
-        $dataset->update([
-            'status' => 'approved',
-            'is_public' => true,
-            'approved_at' => now(),
-            'approved_by' => Auth::id(),
-            'admin_notes' => $validated['admin_notes'] ?? null,
-        ]);
-        
-        // Optional: Send email notification to dataset owner
-        
-        return redirect()->back()->with('success', 'Dataset approved successfully!');
+        DB::beginTransaction();
+        try {
+            $dataset->update([
+                'status' => 'approved',
+                'approved_at' => now(),
+                'approved_by' => Auth::id(),
+                'admin_notes' => $request->admin_notes ?? null,
+            ]);
+
+            // Optional: Send notification to donor here
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Dataset approved successfully!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Failed to approve: ' . $e->getMessage()]);
+        }
     }
 
-    /**
-     * Reject dataset
-     */
-    public function reject(Dataset $dataset, Request $request)
+    // Reject Dataset
+    public function reject($datasetId, Request $request)
     {
-        $validated = $request->validate([
-            'rejection_reason' => 'required|string|max:1000',
+        $dataset = Dataset::findOrFail($datasetId);
+
+        $request->validate([
+            'rejection_reason' => 'required|string|max:500'
         ]);
-        
-        $dataset->update([
-            'status' => 'rejected',
-            'is_public' => false,
-            'rejected_at' => now(),
-            'rejected_by' => Auth::id(),
-            'admin_notes' => $validated['rejection_reason'],
-        ]);
-        
-        // Optional: Send email notification to dataset owner
-        
-        return redirect()->back()->with('success', 'Dataset rejected.');
+
+        DB::beginTransaction();
+        try {
+            $dataset->update([
+                'status' => 'rejected',
+                'rejected_at' => now(),
+                'rejected_by' => Auth::id(),
+                'admin_notes' => $request->rejection_reason,
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Dataset rejected.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Failed to reject: ' . $e->getMessage()]);
+        }
     }
 
-    /**
-     * Set dataset to pending
-     */
-    public function setPending(Dataset $dataset)
-    {
-        $dataset->update([
-            'status' => 'pending',
-            'is_public' => false,
-        ]);
-        
-        return redirect()->back()->with('success', 'Dataset status set to pending.');
-    }
-
-    /**
-     * Bulk approve datasets
-     */
+    // Bulk Approve
     public function bulkApprove(Request $request)
     {
-        $validated = $request->validate([
+        $request->validate([
             'dataset_ids' => 'required|array',
-            'dataset_ids.*' => 'exists:datasets,dataset_id',
+            'dataset_ids.*' => 'exists:datasets,dataset_id'
         ]);
-        
-        $count = Dataset::whereIn('dataset_id', $validated['dataset_ids'])
+
+        Dataset::whereIn('dataset_id', $request->dataset_ids)
             ->where('status', 'pending')
             ->update([
                 'status' => 'approved',
-                'is_public' => true,
                 'approved_at' => now(),
-                'approved_by' => Auth::id(),
+                'approved_by' => Auth::id()
             ]);
-        
-        return redirect()->back()->with('success', "{$count} datasets approved successfully!");
+
+        return back()->with('success', 'Datasets approved successfully!');
     }
 }

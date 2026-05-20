@@ -5,113 +5,117 @@
 <div class="donation-page">
     <div class="container">
         <!-- Header -->
-        <div class="donation-header text-center mb-4">
+        <div class="donation-header">
             <h1 class="page-title">Dataset Donation Form</h1>
-            <p class="page-description">Page 5 of 7: Keywords</p>
+            <p class="page-description">
+                We offer users the option to upload their dataset data to our repository.
+            </p>
+            <p class="page-description">
+                Users can provide tabular or non-tabular dataset data which will be made publicly available on our repository. 
+                Donators are free to edit their donated datasets, but edits must be approved before finalizing.
+            </p>
         </div>
 
         <!-- Progress Bar -->
-        <div class="progress-wrapper mb-4">
-            <div class="progress" style="height: 8px;">
+        <div class="progress-wrapper">
+            <div class="progress">
                 <div class="progress-bar bg-warning" style="width: 71%"></div>
             </div>
-            <span class="progress-text small text-muted">Page 5 / 7</span>
+            <span class="progress-text">Page 5 / 7</span>
         </div>
 
         <!-- Form -->
-        <form action="{{ route('contribute.keywords.store') }}" method="POST" id="keywordsForm">
+        <form action="{{ route('contribute.keywords.store') }}" method="POST">
             @csrf
-            
-            @if ($errors->any())
-            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
-                <h6 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Form has errors:</h6>
-                <ul class="mb-0 small">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            @endif
 
             <!-- Keywords Section -->
             <div class="form-card">
-                <h5 class="card-section-title">Keywords (Optional)</h5>
-                <p class="text-muted small mb-4">
-                    Add keywords to help users discover your dataset. 
-                    Select from popular suggestions or add your own.
+                <h5 class="card-section-title">Optional: Add Keywords</h5>
+                
+                <p class="text-muted mb-3">
+                    Search for an existing keyword below, or type a new keyword and press Enter.
                 </p>
 
-                <!-- Popular Keywords -->
-                @php $popularKeywords = $popularKeywords ?? []; @endphp
-                @if(count($popularKeywords) > 0)
-                <div class="mb-4">
-                    <label class="form-label small fw-semibold">Popular Keywords</label>
-                    <div class="d-flex flex-wrap gap-2">
-                        @foreach($popularKeywords as $kw)
-                        <button type="button" class="btn btn-sm btn-outline-secondary keyword-chip" 
-                                onclick="toggleKeyword(this, '{{ addslashes($kw->keyword_name) }}')"
-                                data-value="{{ addslashes($kw->keyword_name) }}">
-                            {{ $kw->keyword_name }}
-                        </button>
-                        @endforeach
+                <!-- Keyword Input -->
+                <div class="keyword-input-container mb-4">
+                    <input type="text" 
+                           class="form-control" 
+                           id="keyword_input"
+                           placeholder="Add keywords..."
+                           autocomplete="off">
+                    <div class="form-hint mt-2">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Press <kbd>Enter</kbd> to add a keyword
                     </div>
                 </div>
-                @endif
+
+                <!-- Keyword Suggestions (Auto-complete) -->
+                <div id="keyword_suggestions" class="keyword-suggestions mb-3" style="display: none;">
+                    <div class="suggestion-header">
+                        <small class="text-muted">Suggested keywords:</small>
+                    </div>
+                    <div class="suggestions-list" id="suggestions_list">
+                        <!-- Dynamic suggestions will appear here -->
+                    </div>
+                </div>
 
                 <!-- Selected Keywords -->
-                <div class="mb-4">
-                    <label class="form-label small fw-semibold">Selected Keywords</label>
-                    <div id="selectedKeywords" class="d-flex flex-wrap gap-2 min-h-40">
+                <div id="selected_keywords" class="selected-keywords">
+                    <h6 class="mb-3">Selected Keywords:</h6>
+                    <div id="keywords_container" class="keywords-container">
                         @php
-    $oldKeywords = old('keywords');
-    $sessionKeywords = session('donation_wizard.keywords', []);
-    
-    // Handle jika old() return string JSON
-    if (is_string($oldKeywords)) {
-        $decoded = json_decode($oldKeywords, true);
-        $selectedKeywords = is_array($decoded) ? $decoded : [];
-    } elseif (is_array($oldKeywords)) {
-        $selectedKeywords = $oldKeywords;
-    } elseif (is_string($sessionKeywords)) {
-        $decoded = json_decode($sessionKeywords, true);
-        $selectedKeywords = is_array($decoded) ? $decoded : [];
-    } else {
-        $selectedKeywords = is_array($sessionKeywords) ? $sessionKeywords : [];
-    }
-@endphp
-                        @foreach($selectedKeywords as $kw)
-                        <span class="badge bg-primary d-inline-flex align-items-center gap-1 py-2 px-3">
-                            {{ $kw }}
-                            <button type="button" class="btn-close btn-close-white btn-sm" 
-                                    onclick="removeSelectedKeyword('{{ addslashes($kw) }}')" 
-                                    aria-label="Remove"></button>
-                        </span>
-                        @endforeach
+                            $keywords = old('keywords', $keywordsData ?? []);
+                        @endphp
+                        
+                        @forelse($keywords as $index => $keyword)
+                            <span class="keyword-tag">
+                                {{ $keyword }}
+                                <button type="button" class="remove-keyword" onclick="removeKeyword('{{ $keyword }}', {{ $index }})">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </span>
+                        @empty
+                            <p class="text-muted small">No keywords added yet.</p>
+                        @endforelse
                     </div>
-                    <input type="hidden" name="keywords" id="keywordsInput" value="{{ json_encode($selectedKeywords) }}">
+                    <input type="hidden" name="keywords" id="keywords_input" value="{{ json_encode($keywords) }}">
                 </div>
+            </div>
 
-                <!-- Add Custom Keywords -->
-                <div>
-                    <label for="new_keywords" class="form-label small">Add Custom Keywords</label>
-                    <input type="text" class="form-control @error('new_keywords') is-invalid @enderror" 
-                           id="new_keywords" name="new_keywords" 
-                           value="{{ old('new_keywords', '') }}" 
-                           maxlength="500"
-                           placeholder="Type keywords separated by commas (e.g., machine learning, classification, iris)">
-                    @error('new_keywords')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    <div class="form-hint">Press Enter or comma to add multiple keywords</div>
+            <!-- Popular Keywords Section -->
+            <div class="form-card">
+                <h5 class="card-section-title">Popular Keywords</h5>
+                <p class="text-muted mb-3">
+                    Click on any keyword below to quickly add it to your dataset.
+                </p>
+                
+                <div class="popular-keywords">
+                    @php
+                        $popularKeywords = [
+                            'Classification', 'Regression', 'Clustering', 'Machine Learning',
+                            'Deep Learning', 'Neural Networks', 'Data Mining', 'Pattern Recognition',
+                            'Natural Language Processing', 'Computer Vision', 'Time Series',
+                            'Image Processing', 'Text Mining', 'Supervised Learning',
+                            'Unsupervised Learning', 'Reinforcement Learning', 'Feature Extraction',
+                            'Dimensionality Reduction', 'Ensemble Methods', 'Cross Validation'
+                        ];
+                    @endphp
+                    
+                    @foreach($popularKeywords as $keyword)
+                        <span class="keyword-chip" onclick="addKeyword('{{ $keyword }}')">
+                            {{ $keyword }}
+                        </span>
+                    @endforeach
                 </div>
             </div>
 
             <!-- Navigation -->
-            <div class="form-navigation d-flex justify-content-between mt-4">
-                <a href="{{ route('contribute.files') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left me-2"></i>Back
+            <div class="form-navigation">
+                <a href="{{ route('contribute.files') }}" class="btn-back me-3">
+                    <i class="bi bi-arrow-left me-2"></i>BACK
                 </a>
-                <button type="submit" class="btn btn-primary">
-                    Next <i class="bi bi-arrow-right ms-2"></i>
+                <button type="submit" class="btn-next">
+                    NEXT <i class="bi bi-arrow-right ms-2"></i>
                 </button>
             </div>
         </form>
@@ -121,86 +125,428 @@
 
 @push('styles')
 <style>
-    .keyword-chip { border-radius: 20px; padding: 0.3rem 0.8rem; font-size: 0.85rem; transition: all 0.2s; }
-    .keyword-chip:hover, .keyword-chip.active { background: #0077b6; color: white; border-color: #0077b6; }
-    .min-h-40 { min-height: 2.5rem; }
-    .badge .btn-close { filter: invert(1); }
+    .page-title {
+        padding-top: 50px;
+        color: #0077b6;
+        font-weight: 700;
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .page-description {
+        color: #555;
+        line-height: 1.7;
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .progress-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 2.5rem;
+    }
+    
+    .progress {
+        flex: 1;
+        height: 8px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-text {
+        font-size: 0.85rem;
+        color: #6c757d;
+        white-space: nowrap;
+    }
+    
+    .form-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .card-section-title {
+        color: #0077b6;
+        font-weight: 600;
+        font-size: 1.05rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-control {
+        width: 100%;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        transition: border-color 0.2s;
+    }
+    
+    .form-control:focus {
+        border-color: #0077b6;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(0,119,182,0.12);
+    }
+    
+    .form-hint {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    .form-hint kbd {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 0.1rem 0.4rem;
+        font-family: monospace;
+        font-size: 0.85rem;
+    }
+    
+    /* Keyword Suggestions */
+    .keyword-suggestions {
+        background-color: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .suggestion-header {
+        margin-bottom: 0.75rem;
+    }
+    
+    .suggestions-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .suggestion-item {
+        background-color: #e9f5f9;
+        color: #0077b6;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        border: 1px solid #0077b6;
+    }
+    
+    .suggestion-item:hover {
+        background-color: #0077b6;
+        color: white;
+    }
+    
+    /* Selected Keywords */
+    .selected-keywords {
+        margin-top: 2rem;
+    }
+    
+    .keywords-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        min-height: 50px;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+    }
+    
+    .keyword-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background-color: #0077b6;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    
+    .remove-keyword {
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        padding: 0;
+        font-size: 1.1rem;
+        line-height: 1;
+        opacity: 0.8;
+        transition: opacity 0.2s;
+    }
+    
+    .remove-keyword:hover {
+        opacity: 1;
+    }
+    
+    /* Popular Keywords */
+    .popular-keywords {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    
+    .keyword-chip {
+        display: inline-block;
+        background-color: white;
+        color: #0077b6;
+        padding: 0.5rem 1rem;
+        border: 2px solid #0077b6;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    
+    .keyword-chip:hover {
+        background-color: #0077b6;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0,119,182,0.3);
+    }
+    
+    .keyword-chip.added {
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+        color: #6c757d;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+    
+    .btn-back {
+        background-color: #fff;
+        color: #dc3545;
+        border: 1px solid #dc3545;
+        font-weight: 700;
+        padding: 0.75rem 2rem;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .btn-back:hover {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .btn-next {
+        background-color: #0077b6;
+        color: white;
+        font-weight: 700;
+        padding: 0.75rem 2.5rem;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .btn-next:hover {
+        background-color: #005f73;
+    }
+    
+    .form-navigation {
+        display: flex;
+        justify-content: flex-start;
+        margin-top: 2rem;
+        margin-bottom: 3rem;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding: 1.5rem 1rem;
+        }
+        
+        .form-card {
+            padding: 1.5rem;
+        }
+        
+        .page-title {
+            font-size: 1.5rem;
+        }
+        
+        .popular-keywords {
+            gap: 0.5rem;
+        }
+        
+        .keyword-chip {
+            font-size: 0.85rem;
+            padding: 0.4rem 0.8rem;
+        }
+    }
 </style>
 @endpush
 
 @push('scripts')
 <script>
-let selectedKeywords = @json(old('keywords', session('donation_wizard.keywords', [])));
+let keywords = @json($keywordsData ?? old('keywords', []));
+const allKeywords = @json($allKeywords ?? []);
 
-function toggleKeyword(btn, keyword) {
-    const index = selectedKeywords.indexOf(keyword);
-    if (index === -1) {
-        // Add keyword
-        selectedKeywords.push(keyword);
-        btn.classList.add('active');
-    } else {
-        // Remove keyword
-        selectedKeywords.splice(index, 1);
-        btn.classList.remove('active');
-    }
-    updateSelectedDisplay();
-    updateHiddenInput();
-}
-
-function removeSelectedKeyword(keyword) {
-    const index = selectedKeywords.indexOf(keyword);
-    if (index !== -1) {
-        selectedKeywords.splice(index, 1);
-        // Also update chip button state
-        document.querySelectorAll('.keyword-chip').forEach(btn => {
-            if (btn.dataset.value === keyword) btn.classList.remove('active');
-        });
-    }
-    updateSelectedDisplay();
-    updateHiddenInput();
-}
-
-function updateSelectedDisplay() {
-    const container = document.getElementById('selectedKeywords');
-    container.innerHTML = '';
-    selectedKeywords.forEach(kw => {
-        const badge = document.createElement('span');
-        badge.className = 'badge bg-primary d-inline-flex align-items-center gap-1 py-2 px-3';
-        badge.innerHTML = `${kw} <button type="button" class="btn-close btn-close-white btn-sm" onclick="removeSelectedKeyword('${kw.replace(/'/g, "\\'")}')" aria-label="Remove"></button>`;
-        container.appendChild(badge);
-    });
-}
-
-function updateHiddenInput() {
-    document.getElementById('keywordsInput').value = JSON.stringify(selectedKeywords);
-}
-
-// Handle comma/Enter for custom keywords
-document.getElementById('new_keywords').addEventListener('keydown', function(e) {
-    if (e.key === ',' || e.key === 'Enter') {
-        e.preventDefault();
-        const input = this.value.trim();
-        if (input) {
-            const newKws = input.split(',').map(k => k.trim()).filter(k => k && k.length >= 2);
-            newKws.forEach(kw => {
-                if (!selectedKeywords.includes(kw)) {
-                    selectedKeywords.push(kw);
-                }
-            });
-            updateSelectedDisplay();
-            updateHiddenInput();
-            this.value = '';
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    updateKeywordsDisplay();
+    
+    // Input handler
+    const input = document.getElementById('keyword_input');
+    input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const keyword = this.value.trim();
+            if (keyword) {
+                addKeyword(keyword);
+                this.value = '';
+            }
         }
-    }
+    });
+    
+    // Show suggestions on input
+    input.addEventListener('input', function() {
+        const value = this.value.trim().toLowerCase();
+        if (value.length > 0) {
+            showSuggestions(value);
+        } else {
+            hideSuggestions();
+        }
+    });
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.keyword-input-container')) {
+            hideSuggestions();
+        }
+    });
 });
 
-// Initialize chip states on load
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.keyword-chip').forEach(btn => {
-        if (selectedKeywords.includes(btn.dataset.value)) {
-            btn.classList.add('active');
-        }
-    });
+// Add keyword
+function addKeyword(keyword) {
+    const normalizedKeyword = keyword.trim();
+    
+    // Check if already exists
+    if (keywords.includes(normalizedKeyword)) {
+        showNotification('Keyword already added!', 'warning');
+        return;
+    }
+    
+    keywords.push(normalizedKeyword);
+    updateKeywordsDisplay();
+    updateHiddenInput();
+    
+    // Mark as added in popular keywords
+    const chip = document.querySelector(`.keyword-chip[onclick="addKeyword('${normalizedKeyword}')"]`);
+    if (chip) {
+        chip.classList.add('added');
+    }
+    
+    showNotification(`Keyword "${normalizedKeyword}" added`, 'success');
+}
+
+// Remove keyword
+function removeKeyword(keyword, index) {
+    keywords.splice(index, 1);
+    updateKeywordsDisplay();
+    updateHiddenInput();
+    
+    // Unmark in popular keywords
+    const chip = document.querySelector(`.keyword-chip[onclick="addKeyword('${keyword}')"]`);
+    if (chip) {
+        chip.classList.remove('added');
+    }
+}
+
+// Update display
+function updateKeywordsDisplay() {
+    const container = document.getElementById('keywords_container');
+    
+    if (keywords.length === 0) {
+        container.innerHTML = '<p class="text-muted small">No keywords added yet.</p>';
+    } else {
+        container.innerHTML = keywords.map((keyword, index) => `
+            <span class="keyword-tag">
+                ${keyword}
+                <button type="button" class="remove-keyword" onclick="removeKeyword('${keyword}', ${index})">
+                    <i class="bi bi-x"></i>
+                </button>
+            </span>
+        `).join('');
+    }
+}
+
+// Update hidden input for form submission
+function updateHiddenInput() {
+    document.getElementById('keywords_input').value = JSON.stringify(keywords);
+}
+
+// Show suggestions
+function showSuggestions(query) {
+    const suggestionsDiv = document.getElementById('keyword_suggestions');
+    const suggestionsList = document.getElementById('suggestions_list');
+    
+    // Filter keywords that match query and are not already added
+    const filtered = allKeywords.filter(kw => 
+        kw.toLowerCase().includes(query) && !keywords.includes(kw)
+    ).slice(0, 10); // Limit to 10 suggestions
+    
+    if (filtered.length > 0) {
+        suggestionsList.innerHTML = filtered.map(kw => `
+            <span class="suggestion-item" onclick="addKeyword('${kw}')">${kw}</span>
+        `).join('');
+        
+        suggestionsDiv.style.display = 'block';
+    } else {
+        hideSuggestions();
+    }
+}
+
+// Hide suggestions
+function hideSuggestions() {
+    document.getElementById('keyword_suggestions').style.display = 'none';
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'warning' ? 'warning' : 'success'} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 250px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    // Keywords are optional, so no validation needed
+    // But you can add validation if required:
+    // if (keywords.length === 0) {
+    //     e.preventDefault();
+    //     showNotification('Please add at least one keyword', 'warning');
+    //     return false;
+    // }
 });
 </script>
 @endpush

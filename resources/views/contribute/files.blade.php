@@ -5,273 +5,575 @@
 <div class="donation-page">
     <div class="container">
         <!-- Header -->
-        <div class="donation-header text-center mb-4">
+        <div class="donation-header">
             <h1 class="page-title">Dataset Donation Form</h1>
-            <p class="page-description">Page 4 of 7: Dataset Files</p>
+            <p class="page-description">
+                We offer users the option to upload their dataset data to our repository.
+            </p>
+            <p class="page-description">
+                Users can provide tabular or non-tabular dataset data which will be made publicly available on our repository. 
+                Donators are free to edit their donated datasets, but edits must be approved before finalizing.
+            </p>
         </div>
 
         <!-- Progress Bar -->
-        <div class="progress-wrapper mb-4">
-            <div class="progress" style="height: 8px;">
+        <div class="progress-wrapper">
+            <div class="progress">
                 <div class="progress-bar bg-warning" style="width: 57%"></div>
             </div>
-            <span class="progress-text small text-muted">Page 4 / 7</span>
+            <span class="progress-text">Page 4 / 7</span>
         </div>
 
+        {{-- ✅ TAMPILKAN ERROR VALIDASI --}}
+    @if ($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+        <h6 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Form has errors:</h6>
+        <ul class="mb-0 small">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    @endif
+
         <!-- Form -->
-        <form action="{{ route('contribute.files.store') }}" method="POST" enctype="multipart/form-data" id="filesForm">
+        <form action="{{ route('contribute.files.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
-            
-            @if ($errors->any())
-            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
-                <h6 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Form has errors:</h6>
-                <ul class="mb-0 small">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            @endif
 
-            <!-- Files Section -->
+            <!-- File Format Selection -->
             <div class="form-card">
-                <h5 class="card-section-title">Dataset Files <span class="required">*</span></h5>
-                <p class="text-muted small mb-4">
-                    Upload the actual dataset files. At least one file is required.
-                    <br>Supported formats: CSV, ARFF, TXT, JSON, XLSX, ZIP (max 500MB per file)
-                </p>
+                <h5 class="card-section-title">What format is the data file? <span class="required">*</span></h5>
+                
+                <div class="radio-group">
+                    <div class="radio-item">
+                        <span class="radio-label">Tabular</span>
+                        <input type="radio" 
+                               name="file_format" 
+                               value="tabular" 
+                               id="format_tabular"
+                               {{ old('file_format', 'tabular') == 'tabular' ? 'checked' : '' }}
+                               onchange="toggleFormat()">
+                    </div>
+                    <div class="radio-item">
+                        <span class="radio-label">Other</span>
+                        <input type="radio" 
+                               name="file_format" 
+                               value="other" 
+                               id="format_other"
+                               {{ old('file_format') == 'other' ? 'checked' : '' }}
+                               onchange="toggleFormat()">
+                    </div>
+                </div>
+            </div>
 
-                <!-- Files Container -->
-                <div id="filesContainer">
-                    @php
-                        $filesData = old('files', session('donation_wizard.files', []));
-                        if (empty($filesData)) {
-                            $filesData = [['filename' => '', 'file_format' => 'csv', 'file_role' => 'data', 'is_default' => true]];
-                        }
-                    @endphp
+            <!-- Tabular Data Section (Shown when Tabular is selected) -->
+            <div id="tabular_section" class="tabular-section">
+                <div class="form-card">
+                    <h5 class="card-section-title">Tabular Data <span class="required">*</span></h5>
                     
-                    @foreach($filesData as $index => $file)
-                    <div class="file-item p-3 mb-3 border rounded" data-index="{{ $index }}">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0 text-primary">File {{ $index + 1 }}</h6>
-                            @if($index > 0)
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFile({{ $index }})">
-                                <i class="bi bi-trash me-1"></i>Remove
-                            </button>
-                            @endif
+                    <div class="checkbox-group mb-4">
+                        <div class="checkbox-item">
+                            <span class="checkbox-label">Does the data have a header?</span>
+                           <input type="hidden" name="has_header" value="0">
+<input type="checkbox" name="has_header" id="has_header" value="1" {{ old('has_header') == '1' ? 'checked' : '' }}>
+
                         </div>
-                        
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label small">Display Filename <span class="required">*</span></label>
-                                <input type="text" class="form-control form-control-sm @error('files.'.$index.'.filename') is-invalid @enderror" 
-                                       name="files[{{ $index }}][filename]" 
-                                       value="{{ $file['filename'] ?? '' }}" 
-                                       required maxlength="255"
-                                       placeholder="e.g., dataset.csv">
-                                @error('files.'.$index.'.filename')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small">Format <span class="required">*</span></label>
-                                <select class="form-select form-select-sm @error('files.'.$index.'.file_format') is-invalid @enderror" 
-                                        name="files[{{ $index }}][file_format]" required>
-                                    @foreach(['csv', 'arff', 'txt', 'json', 'xlsx', 'zip', 'tar.gz', 'pdf', 'other'] as $fmt)
-                                    <option value="{{ $fmt }}" {{ ($file['file_format'] ?? '') == $fmt ? 'selected' : '' }}>{{ strtoupper($fmt) }}</option>
-                                    @endforeach
-                                </select>
-                                @error('files.'.$index.'.file_format')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small">Role <span class="required">*</span></label>
-                                <select class="form-select form-select-sm @error('files.'.$index.'.file_role') is-invalid @enderror" 
-                                        name="files[{{ $index }}][file_role]" required>
-                                    <option value="data" {{ ($file['file_role'] ?? '') == 'data' ? 'selected' : '' }}>Data</option>
-                                    <option value="documentation" {{ ($file['file_role'] ?? '') == 'documentation' ? 'selected' : '' }}>Documentation</option>
-                                    <option value="code" {{ ($file['file_role'] ?? '') == 'code' ? 'selected' : '' }}>Code</option>
-                                    <option value="example" {{ ($file['file_role'] ?? '') == 'example' ? 'selected' : '' }}>Example</option>
-                                    <option value="test" {{ ($file['file_role'] ?? '') == 'test' ? 'selected' : '' }}>Test</option>
-                                    <option value="other" {{ ($file['file_role'] ?? '') == 'other' ? 'selected' : '' }}>Other</option>
-                                </select>
-                                @error('files.'.$index.'.file_role')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                            </div>
-                            <div class="col-md-12">
-                                <label class="form-label small">Upload File</label>
-                                <input type="file" class="form-control form-control-sm" 
-                                       name="files[{{ $index }}][file]" 
-                                       accept=".csv,.txt,.arff,.json,.xlsx,.zip,.tar.gz,.pdf">
-                                <div class="form-hint">Max 500MB. Leave empty to skip upload for this entry.</div>
-                                @if(isset($file['original_filename']))
-                                <small class="text-success"><i class="bi bi-check-circle me-1"></i>Already uploaded: {{ $file['original_filename'] }}</small>
-                                @endif
-                            </div>
-                            <div class="col-md-12">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" 
-                                           name="files[{{ $index }}][is_default]" value="1"
-                                           id="default_{{ $index }}"
-                                           {{ !empty($file['is_default']) ? 'checked' : '' }}
-                                           onchange="updateDefaultFile({{ $index }})">
-                                    <label class="form-check-label small" for="default_{{ $index }}">
-                                        Set as default download file
-                                    </label>
-                                </div>
-                            </div>
+                        <div class="checkbox-item">
+                            <span class="checkbox-label">Does the data have missing values?</span>
+                            <input type="hidden" name="has_missing" value="0">
+<input type="checkbox" name="has_missing" id="has_missing" value="1" {{ old('has_missing') == '1' ? 'checked' : '' }}>
                         </div>
                     </div>
-                    @endforeach
+
+                    <!-- File Upload -->
+                    <div class="upload-area mb-4" onclick="document.getElementById('tabular_file').click()">
+                        <i class="bi bi-cloud-arrow-up upload-icon"></i>
+                        <p class="upload-text">Choose a file or drag and drop here</p>
+                        <small class="text-muted">CSV, ARFF, TXT (max 50MB)</small>
+                        <input type="file" id="tabular_file" name="tabular_file" class="d-none" 
+                               accept=".csv,.arff,.txt">
+                    </div>
+
+                    <!-- Variables Table -->
+                    <div class="variables-table-container">
+                        <table class="table variables-table" id="variables_table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Variable Type</th>
+                                    <th>Demographic</th>
+                                    <th>Description</th>
+                                    <th>Units</th>
+                                    <th>Missing Values</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><input type="text" class="form-control form-control-sm" name="variables[0][name]" placeholder="Column name"></td>
+<td>
+    <select class="form-control form-control-sm" name="variables[0][role]">
+                                            <option value="Feature">Feature</option>
+                                            <option value="Target">Target</option>
+                                            <option value="ID">ID</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                           <select class="form-control form-control-sm" name="variables[0][type]">
+                                            <option value="Continuous">Continuous</option>
+                                            <option value="Categorical">Categorical</option>
+                                            <option value="Integer">Integer</option>
+                                            <option value="Real">Real</option>
+                                        </select>
+                                    </td>
+                                   <td><input type="text" class="form-control form-control-sm" name="variables[0][demo]"></td>
+<td><input type="text" class="form-control form-control-sm" name="variables[0][desc]"></td>
+<td><input type="text" class="form-control form-control-sm" name="variables[0][units]"></td>
+<td class="text-center"><input type="checkbox" name="variables[0][missing]"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="table-buttons mt-3">
+                            <button type="button" class="btn btn-primary" onclick="addVariableRow()">
+                                <i class="bi bi-plus-circle me-2"></i>ADD ROW
+                            </button>
+                            <button type="button" class="btn btn-danger" onclick="deleteVariableRow()">
+                                <i class="bi bi-trash me-2"></i>DELETE ROW
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Add File Button -->
-                <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="addFile()">
-                    <i class="bi bi-plus-circle me-1"></i>Add Another File
-                </button>
+                <!-- Other Data Section -->
+                <div class="form-card">
+                    <h5 class="card-section-title">Other Data <i class="bi bi-info-circle text-info" data-bs-toggle="tooltip" title="Additional supporting files"></i></h5>
+                    
+                    <div class="upload-area" onclick="document.getElementById('other_file').click()">
+                        <i class="bi bi-cloud-arrow-up upload-icon"></i>
+                        <p class="upload-text">Choose a file or drag and drop here</p>
+                        <small class="text-muted">Any format (max 50MB)</small>
+                        <input type="file" id="other_file" name="other_file" class="d-none">
+                    </div>
+                </div>
+
+                <!-- Test Data Section -->
+                <div class="form-card">
+                    <h5 class="card-section-title">Test Data <i class="bi bi-info-circle text-info" data-bs-toggle="tooltip" title="Separate test dataset (optional)"></i></h5>
+                    
+                    <div class="upload-area" onclick="document.getElementById('test_file').click()">
+                        <i class="bi bi-cloud-arrow-up upload-icon"></i>
+                        <p class="upload-text">Choose a file or drag and drop here</p>
+                        <small class="text-muted">Any format (max 50MB)</small>
+                        <input type="file" id="test_file" name="test_file" class="d-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other Format Section (Shown when Other is selected) -->
+            <div id="other_section" class="other-section" style="display: none;">
+                <div class="form-card">
+                    <h5 class="card-section-title">Dataset <span class="required">*</span></h5>
+                    
+                    <div class="upload-area" onclick="document.getElementById('dataset_file').click()">
+                        <i class="bi bi-cloud-arrow-up upload-icon"></i>
+                        <p class="upload-text">Choose a file or drag and drop here</p>
+                        <small class="text-muted">Any format (max 50MB)</small>
+                        <input type="file" id="dataset_file" name="dataset_file" class="d-none">
+                    </div>
+                </div>
+
+                <div class="form-card">
+                    <h5 class="card-section-title">Test Data <i class="bi bi-info-circle text-info" data-bs-toggle="tooltip" title="Separate test dataset (optional)"></i></h5>
+                    
+                    <div class="upload-area" onclick="document.getElementById('test_file_other').click()">
+                        <i class="bi bi-cloud-arrow-up upload-icon"></i>
+                        <p class="upload-text">Choose a file or drag and drop here</p>
+                        <small class="text-muted">Any format (max 50MB)</small>
+                        <input type="file" id="test_file_other" name="test_file_other" class="d-none">
+                    </div>
+                </div>
             </div>
 
             <!-- Navigation -->
-            <div class="form-navigation d-flex justify-content-between mt-4">
-                <a href="{{ route('contribute.creators') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left me-2"></i>Back
+            <div class="form-navigation">
+                <a href="{{ route('contribute.creators') }}" class="btn-back me-3">
+                    <i class="bi bi-arrow-left me-2"></i>BACK
                 </a>
-                <button type="submit" class="btn btn-primary">
-                    Next <i class="bi bi-arrow-right ms-2"></i>
+                <button type="submit" class="btn-next">
+                    NEXT <i class="bi bi-arrow-right ms-2"></i>
                 </button>
             </div>
         </form>
     </div>
 </div>
-
-<!-- Hidden Template for New File -->
-<template id="fileTemplate">
-    <div class="file-item p-3 mb-3 border rounded" data-index="__INDEX__">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="mb-0 text-primary">File __INDEX__</h6>
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFile(__INDEX__)">
-                <i class="bi bi-trash me-1"></i>Remove
-            </button>
-        </div>
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label class="form-label small">Display Filename <span class="required">*</span></label>
-                <input type="text" class="form-control form-control-sm" name="files[__INDEX__][filename]" required maxlength="255" placeholder="e.g., dataset.csv">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small">Format <span class="required">*</span></label>
-                <select class="form-select form-select-sm" name="files[__INDEX__][file_format]" required>
-                    <option value="csv">CSV</option>
-                    <option value="arff">ARFF</option>
-                    <option value="txt">TXT</option>
-                    <option value="json">JSON</option>
-                    <option value="xlsx">XLSX</option>
-                    <option value="zip">ZIP</option>
-                    <option value="tar.gz">TAR.GZ</option>
-                    <option value="pdf">PDF</option>
-                    <option value="other">OTHER</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small">Role <span class="required">*</span></label>
-                <select class="form-select form-select-sm" name="files[__INDEX__][file_role]" required>
-                    <option value="data">Data</option>
-                    <option value="documentation">Documentation</option>
-                    <option value="code">Code</option>
-                    <option value="example">Example</option>
-                    <option value="test">Test</option>
-                    <option value="other">Other</option>
-                </select>
-            </div>
-            <div class="col-md-12">
-                <label class="form-label small">Upload File</label>
-                <input type="file" class="form-control form-control-sm" name="files[__INDEX__][file]" accept=".csv,.txt,.arff,.json,.xlsx,.zip,.tar.gz,.pdf">
-                <div class="form-hint">Max 500MB</div>
-            </div>
-            <div class="col-md-12">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="files[__INDEX__][is_default]" value="1" id="default___INDEX__" onchange="updateDefaultFile(__INDEX__)">
-                    <label class="form-check-label small" for="default___INDEX__">Set as default download file</label>
-                </div>
-            </div>
-        </div>
-    </div>
-</template>
 @endsection
+
+@push('styles')
+<style>
+    .page-title {
+        padding-top: 50px;
+        color: #0077b6;
+        font-weight: 700;
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .page-description {
+        color: #555;
+        line-height: 1.7;
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .progress-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 2.5rem;
+    }
+    
+    .progress {
+        flex: 1;
+        height: 8px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-text {
+        font-size: 0.85rem;
+        color: #6c757d;
+        white-space: nowrap;
+    }
+    
+    .form-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .card-section-title {
+        color: #0077b6;
+        font-weight: 600;
+        font-size: 1.05rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .required {
+        color: #dc3545;
+    }
+    
+    .radio-group, .checkbox-group {
+        margin: 1rem 0;
+    }
+    
+    .radio-item, .checkbox-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .radio-item:last-child, .checkbox-item:last-child {
+        border-bottom: none;
+    }
+    
+    .radio-label, .checkbox-label {
+        font-size: 0.95rem;
+        color: #333;
+    }
+    
+    .form-control {
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 0.65rem 1rem;
+        font-size: 0.95rem;
+    }
+    
+    .form-control:focus {
+        border-color: #0077b6;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(0,119,182,0.12);
+    }
+    
+    .upload-area {
+        border: 2px dashed #0077b6;
+        border-radius: 8px;
+        padding: 3rem 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        background-color: #f8f9fa;
+    }
+    
+    .upload-area:hover {
+        background-color: #e9f5f9;
+        border-color: #005f73;
+    }
+    
+    .upload-icon {
+        font-size: 3rem;
+        color: #0077b6;
+        display: block;
+        margin-bottom: 1rem;
+    }
+    
+    .upload-text {
+        margin: 0;
+        color: #333;
+        font-size: 1rem;
+        font-weight: 500;
+    }
+    
+    .variables-table {
+        width: 100%;
+        margin-top: 1rem;
+    }
+    
+    .variables-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        font-size: 0.85rem;
+        padding: 0.75rem;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .variables-table td {
+        padding: 0.5rem;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .table-buttons {
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .btn-back {
+        background-color: #fff;
+        color: #dc3545;
+        border: 1px solid #dc3545;
+        font-weight: 700;
+        padding: 0.75rem 2rem;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .btn-back:hover {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .btn-next {
+        background-color: #0077b6;
+        color: white;
+        font-weight: 700;
+        padding: 0.75rem 2.5rem;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .btn-next:hover {
+        background-color: #005f73;
+    }
+    
+    .btn-primary {
+        background-color: #0077b6;
+        border: none;
+        color: white;
+        font-weight: 600;
+        padding: 0.65rem 1.5rem;
+        border-radius: 6px;
+    }
+    
+    .btn-primary:hover {
+        background-color: #005f73;
+    }
+    
+    .btn-danger {
+        background-color: #dc3545;
+        border: none;
+        color: white;
+        font-weight: 600;
+        padding: 0.65rem 1.5rem;
+        border-radius: 6px;
+    }
+    
+    .btn-danger:hover {
+        background-color: #c82333;
+    }
+    
+    .form-navigation {
+        display: flex;
+        justify-content: flex-start;
+        margin-top: 2rem;
+        margin-bottom: 3rem;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding: 1.5rem 1rem;
+        }
+        
+        .form-card {
+            padding: 1.5rem;
+        }
+        
+        .page-title {
+            font-size: 1.5rem;
+        }
+        
+        .variables-table {
+            font-size: 0.8rem;
+        }
+        
+        .variables-table th,
+        .variables-table td {
+            padding: 0.4rem;
+        }
+    }
+</style>
+@endpush
 
 @push('scripts')
 <script>
-let fileIndex = {{ count($filesData) }};
-
-function addFile() {
-    const template = document.getElementById('fileTemplate');
-    const clone = template.content.cloneNode(true);
-    const html = clone.querySelector('.file-item').outerHTML.replace(/__INDEX__/g, fileIndex);
+// Toggle between Tabular and Other format
+function toggleFormat() {
+    const isTabular = document.getElementById('format_tabular').checked;
+    const tabularSection = document.getElementById('tabular_section');
+    const otherSection = document.getElementById('other_section');
     
-    document.getElementById('filesContainer').insertAdjacentHTML('beforeend', html);
-    fileIndex++;
-}
-
-function removeFile(index) {
-    const item = document.querySelector(`.file-item[data-index="${index}"]`);
-    if (item) {
-        item.remove();
-        // Re-index remaining items
-        document.querySelectorAll('.file-item').forEach((el, i) => {
-            el.setAttribute('data-index', i);
-            el.querySelectorAll('[name]').forEach(input => {
-                input.name = input.name.replace(/\[\d+\]/, `[${i}]`);
-                if (input.id) input.id = input.id.replace(/\d+/, i);
-            });
-        });
-        fileIndex = document.querySelectorAll('.file-item').length;
+    if (isTabular) {
+        tabularSection.style.display = 'block';
+        otherSection.style.display = 'none';
+    } else {
+        tabularSection.style.display = 'none';
+        otherSection.style.display = 'block';
     }
 }
 
-function updateDefaultFile(selectedIndex) {
-    // Only one file can be default
-    document.querySelectorAll('input[name*="[is_default]"]').forEach((cb, i) => {
-        if (i !== selectedIndex) cb.checked = false;
-    });
+// Add variable row
+function addVariableRow() {
+    const table = document.getElementById('variables_table');
+    const tbody = table.querySelector('tbody');
+    const rowIndex = tbody.querySelectorAll('tr').length; // index baru
+    
+    const newRow = document.createElement('tr');
+    
+    newRow.innerHTML = `
+        <td><input type="text" class="form-control form-control-sm" name="variables[${rowIndex}][name]" placeholder="Column name"></td>
+        <td>
+            <select class="form-control form-control-sm" name="variables[${rowIndex}][role]">
+                <option value="Feature">Feature</option>
+                <option value="Target">Target</option>
+                <option value="ID">ID</option>
+            </select>
+        </td>
+        <td>
+            <select class="form-control form-control-sm" name="variables[${rowIndex}][type]">
+                <option value="Continuous">Continuous</option>
+                <option value="Categorical">Categorical</option>
+                <option value="Integer">Integer</option>
+                <option value="Real">Real</option>
+            </select>
+        </td>
+        <td><input type="text" class="form-control form-control-sm" name="variables[${rowIndex}][demo]"></td>
+        <td><input type="text" class="form-control form-control-sm" name="variables[${rowIndex}][desc]"></td>
+        <td><input type="text" class="form-control form-control-sm" name="variables[${rowIndex}][units]"></td>
+        <td class="text-center"><input type="checkbox" name="variables[${rowIndex}][missing]"></td>
+    `;
+    
+    tbody.appendChild(newRow);
+}
+
+// Delete variable row
+function deleteVariableRow() {
+    const table = document.getElementById('variables_table');
+    const tbody = table.querySelector('tbody');
+    const rows = tbody.querySelectorAll('tr');
+    
+    if (rows.length > 1) {
+        tbody.removeChild(rows[rows.length - 1]);
+    } else {
+        alert('At least one variable row is required.');
+    }
+}
+
+// File upload preview
+document.getElementById('tabular_file')?.addEventListener('change', function(e) {
+    showFilePreview(this, 'tabular_file');
+});
+
+document.getElementById('other_file')?.addEventListener('change', function(e) {
+    showFilePreview(this, 'other_file');
+});
+
+document.getElementById('test_file')?.addEventListener('change', function(e) {
+    showFilePreview(this, 'test_file');
+});
+
+document.getElementById('dataset_file')?.addEventListener('change', function(e) {
+    showFilePreview(this, 'dataset_file');
+});
+
+document.getElementById('test_file_other')?.addEventListener('change', function(e) {
+    showFilePreview(this, 'test_file_other');
+});
+
+function showFilePreview(input, elementId) {
+    const file = input.files[0];
+    if (file) {
+        const uploadArea = input.closest('.upload-area');
+        const preview = document.createElement('div');
+        preview.className = 'alert alert-success mt-3';
+        preview.innerHTML = `
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>${file.name}</strong> • ${(file.size / 1024 / 1024).toFixed(2)} MB
+        `;
+        
+        // Remove existing preview
+        const existingPreview = uploadArea.nextElementSibling;
+        if (existingPreview && existingPreview.classList.contains('alert')) {
+            existingPreview.remove();
+        }
+        
+        uploadArea.after(preview);
+    }
 }
 
 // Form validation
-document.getElementById('filesForm').addEventListener('submit', function(e) {
-    const files = document.querySelectorAll('.file-item');
-    if (files.length === 0) {
-        e.preventDefault();
-        alert('Please add at least one file');
-        return false;
-    }
+document.querySelector('form').addEventListener('submit', function(e) {
+    const isTabular = document.getElementById('format_tabular').checked;
     
-    let valid = true;
-    files.forEach(file => {
-        const filename = file.querySelector('input[name*="[filename]"]');
-        const format = file.querySelector('select[name*="[file_format]"]');
-        const role = file.querySelector('select[name*="[file_role]"]');
-        
-        if (!filename.value.trim()) {
-            valid = false;
-            filename.classList.add('is-invalid');
-        } else {
-            filename.classList.remove('is-invalid');
+    if (isTabular) {
+        const tabularFile = document.getElementById('tabular_file').files[0];
+        if (!tabularFile) {
+            e.preventDefault();
+            alert('Please upload a tabular data file.');
+            return false;
         }
-        if (!format.value) {
-            valid = false;
-            format.classList.add('is-invalid');
-        } else {
-            format.classList.remove('is-invalid');
+    } else {
+        const datasetFile = document.getElementById('dataset_file').files[0];
+        if (!datasetFile) {
+            e.preventDefault();
+            alert('Please upload a dataset file.');
+            return false;
         }
-        if (!role.value) {
-            valid = false;
-            role.classList.add('is-invalid');
-        } else {
-            role.classList.remove('is-invalid');
-        }
-    });
-    
-    if (!valid) {
-        e.preventDefault();
-        alert('Please fill in all required fields for each file');
-        return false;
     }
+});
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleFormat();
 });
 </script>
 @endpush
