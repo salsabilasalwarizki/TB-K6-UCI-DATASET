@@ -257,7 +257,7 @@
     <!-- Quick Actions Footer -->
     <div class="mt-4 pt-3 border-top">
         <div class="d-flex flex-wrap gap-2 justify-content-center">
-            <a href="{{ route('users.index') }}" class="btn btn-outline-secondary btn-sm">
+            <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-people me-1"></i>Manage Users
             </a>
             <a href="{{ route('datasets.index') }}" class="btn btn-outline-secondary btn-sm">
