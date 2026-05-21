@@ -661,4 +661,64 @@ if (!empty($data['files']) && is_array($data['files'])) {
             return redirect()->back()->with('error', '❌ Gagal: ' . $e->getMessage())->withInput();
         }
     }
+    // app/Http/Controllers/ContributeController.php
+
+/**
+ * Show edit form for dataset metadata
+ */
+/**
+ * Show edit form for dataset metadata
+ */
+public function editMetadata(Dataset $dataset)
+{
+    // Pastikan user adalah pemilik dataset
+    if ($dataset->user_id !== auth()->id()) {
+        abort(403, 'Unauthorized');
+    }
+    
+    // Hanya dataset approved/available yang bisa diedit
+    if (!in_array($dataset->status, ['approved', 'available'])) {
+        return redirect()->route('profile.edits')
+            ->with('error', 'Only approved datasets can be edited.');
+    }
+    
+    return view('contribute.edit.metadata', compact('dataset'));
+}
+
+/**
+ * Update dataset metadata
+ */
+public function updateMetadata(Request $request, Dataset $dataset)
+{
+    // Validasi ownership
+    if ($dataset->user_id !== auth()->id()) {
+        abort(403, 'Unauthorized');
+    }
+    
+    // Validasi input
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'abstract' => 'required|string|max:2000',
+        'description' => 'nullable|string',
+        'subject_area' => 'nullable|string|max:100',
+        'data_type' => 'nullable|string|max:50',
+        'task_type' => 'nullable|string|max:50',
+        'num_instances' => 'nullable|integer|min:0',
+        'num_features' => 'nullable|integer|min:0',
+    ]);
+    
+    // Update dataset
+    $dataset->update($validated);
+    
+    // Jika dataset approved, ubah status ke pending untuk review
+    if ($dataset->status === 'approved') {
+        $dataset->update(['status' => 'pending']);
+        
+        return redirect()->route('profile.edits')
+            ->with('success', 'Edit submitted for review. Changes will be live after admin approval.');
+    }
+    
+    return redirect()->route('profile.edits')
+        ->with('success', 'Dataset updated successfully.');
+}
 }

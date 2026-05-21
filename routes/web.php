@@ -78,7 +78,15 @@ Route::middleware('auth')->prefix('profile')->name('profile.')->group(function (
     
     Route::get('/edits', [ProfileController::class, 'edits'])->name('edits');
 });
-    
+
+// Edit Routes for Approved Datasets (inside auth middleware group)
+Route::middleware('auth')->prefix('contribute/edit')->name('contribute.edit.')->group(function () {
+    // Edit Metadata
+    Route::get('/dataset/{dataset}/metadata', [ContributeController::class, 'editMetadata'])
+        ->name('metadata');
+    Route::put('/dataset/{dataset}/metadata', [ContributeController::class, 'updateMetadata'])
+        ->name('metadata.update');
+}); 
     Route::middleware('auth')->prefix('contribute/donation')->name('contribute.')->group(function () {
     // Page 1: Metadata
     Route::get('/metadata', [ContributeController::class, 'createMetadata'])->name('metadata');

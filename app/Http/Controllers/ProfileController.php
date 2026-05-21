@@ -186,12 +186,21 @@ class ProfileController extends Controller
     /**
      * Show user's dataset edits/submissions
      */
-    public function edits()
-    {
-        $user = Auth::user();
-        
-        return view('profile.edits');
-    }
+    // app/Http/Controllers/ProfileController.php
+
+public function edits()
+{
+    // Ambil dataset yang:
+    // 1. Dimiliki oleh user yang login
+    // 2. Statusnya 'approved' atau 'available' (bisa diedit)
+    $datasets = auth()->user()->datasets()
+        ->whereIn('status', ['approved', 'available'])
+        ->with(['files', 'keywords', 'contributors'])
+        ->orderBy('updated_at', 'desc')
+        ->paginate(10);
+    
+    return view('profile.edits', compact('datasets'));
+}
     /**
  * Update dataset visibility
  */
