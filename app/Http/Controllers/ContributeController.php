@@ -409,38 +409,38 @@ class ContributeController extends Controller
                 }
             }
 
-            // ===== 8. FILES =====
-            if (!empty($data['files']) && is_array($data['files'])) {
-                $uploadPath = "datasets/{$dataset->dataset_id}";
-                Storage::disk('public')->makeDirectory($uploadPath);
+           // ===== 8. FILES =====
+if (!empty($data['files']) && is_array($data['files'])) {
+    $uploadPath = "datasets/{$dataset->dataset_id}";
+    Storage::disk('public')->makeDirectory($uploadPath);
 
-                foreach ($data['files'] as $i => $fileMeta) {
-                    if (!isset($fileMeta['temp_path'])) continue;
-                    
-                    if (Storage::disk('local')->exists($fileMeta['temp_path'])) {
-                        $content = Storage::disk('local')->get($fileMeta['temp_path']);
-                        $finalName = basename($fileMeta['temp_path']);
-                        $finalPath = "{$uploadPath}/{$finalName}";
-                        
-                        Storage::disk('public')->put($finalPath, $content);
+    foreach ($data['files'] as $i => $fileMeta) {
+        if (!isset($fileMeta['temp_path'])) continue;
+        
+        if (Storage::disk('local')->exists($fileMeta['temp_path'])) {
+            $content = Storage::disk('local')->get($fileMeta['temp_path']);
+            $finalName = basename($fileMeta['temp_path']);
+            $finalPath = "{$uploadPath}/{$finalName}";
+            
+            Storage::disk('public')->put($finalPath, $content);
 
-                        File::create([
-                            'dataset_id' => $dataset->dataset_id,
-                            'filename' => $finalName,
-                            'original_filename' => $fileMeta['name'],
-                            'file_format' => strtoupper($fileMeta['extension']),
-                            'file_size' => $this->formatFileSize($fileMeta['size']),
-                            'file_size_bytes' => $fileMeta['size'],
-                            'mime_type' => $fileMeta['mime'],
-                            'is_primary' => $fileMeta['is_primary'] ?? ($i === 0),
-                            'file_role' => 'data',
-                            'storage_path' => $finalPath,
-                        ]);
-                        
-                        Storage::disk('local')->delete($fileMeta['temp_path']);
-                    }
-                }
-            }
+            File::create([
+                'dataset_id' => $dataset->dataset_id,
+                'filename' => $finalName,
+                'original_filename' => $fileMeta['name'],
+                'file_format' => strtoupper($fileMeta['extension']),
+                'file_size' => $this->formatFileSize($fileMeta['size']),
+                'file_size_bytes' => $fileMeta['size'],
+                'mime_type' => $fileMeta['mime'],
+                'is_primary' => $fileMeta['is_primary'] ?? ($i === 0),
+                'file_role' => 'data',
+                'file_path' => $finalPath, // ✅ FIX: Ganti storage_path jadi file_path
+            ]);
+            
+            Storage::disk('local')->delete($fileMeta['temp_path']);
+        }
+    }
+}
 
             DB::commit();
             Session::forget('contribute_data');
