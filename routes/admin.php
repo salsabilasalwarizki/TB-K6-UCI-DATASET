@@ -22,7 +22,7 @@ use App\Http\Controllers\Admin\{
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     
     // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     
     // Dataset Review
     Route::prefix('datasets')->name('datasets.')->group(function () {

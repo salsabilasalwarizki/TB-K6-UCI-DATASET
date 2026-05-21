@@ -108,16 +108,21 @@ class AdminDatasetController extends Controller
         return back()->with('success', 'Dataset deleted successfully.');
     }
     
-    public function approve(Dataset $dataset)
-    {
-        $dataset->update([
-            'status' => 'approved',
-            'approved_at' => now(),
-            'approved_by' => auth()->id()
-        ]);
-        
-        return back()->with('success', 'Dataset approved successfully.');
+ public function approve(Dataset $dataset)
+{
+    // Pastikan user adalah admin
+    if (!auth()->user()->isAdmin()) {
+        abort(403, 'ADMIN ACCESS REQUIRED.');
     }
+    
+    $dataset->update([
+        'status' => 'approved',
+        'approved_at' => now(),
+        'approved_by' => auth()->id()
+    ]);
+    
+    return redirect()->back()->with('success', 'Dataset approved successfully.');
+}
     
     public function reject(Request $request, Dataset $dataset)
     {

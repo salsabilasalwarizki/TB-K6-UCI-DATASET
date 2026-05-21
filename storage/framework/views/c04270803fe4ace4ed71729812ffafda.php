@@ -1,14 +1,14 @@
-@extends('layouts.app')
-@section('title', $dataset->name)
 
-@section('content')
+<?php $__env->startSection('title', $dataset->name); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container py-4">
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('home') }}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('profile.datasets') }}">My Datasets</a></li>
-            <li class="breadcrumb-item active">{{ Str::limit($dataset->name, 50) }}</li>
+            <li class="breadcrumb-item"><a href="<?php echo e(route('home')); ?>">Home</a></li>
+            <li class="breadcrumb-item"><a href="<?php echo e(route('profile.datasets')); ?>">My Datasets</a></li>
+            <li class="breadcrumb-item active"><?php echo e(Str::limit($dataset->name, 50)); ?></li>
         </ol>
     </nav>
 
@@ -19,11 +19,12 @@
                 <div class="col-md-8">
                     <div class="d-flex align-items-center gap-3 mb-2">
                         <i class="bi bi-database display-6"></i>
-                        <h1 class="h3 mb-0">{{ $dataset->name }}</h1>
+                        <h1 class="h3 mb-0"><?php echo e($dataset->name); ?></h1>
                     </div>
                     <p class="mb-0 opacity-75">
                         <i class="bi bi-calendar me-1"></i>
-                        Donated on {{ $dataset->donated_date?->format('n/j/Y') ?? 'N/A' }}
+                        Donated on <?php echo e($dataset->donated_date?->format('n/j/Y') ?? 'N/A'); ?>
+
                     </p>
                 </div>
                 <div class="col-md-4 text-md-end mt-3 mt-md-0">
@@ -31,9 +32,10 @@
                         <i class="bi bi-pencil"></i>
                     </button>
                     <div class="form-check form-switch d-inline-block">
-                        <input class="form-check-input" type="checkbox" id="visibilityToggle" {{ $dataset->is_public ?? false ? 'checked' : '' }}>
+                        <input class="form-check-input" type="checkbox" id="visibilityToggle" <?php echo e($dataset->is_public ?? false ? 'checked' : ''); ?>>
                         <label class="form-check-label text-white" for="visibilityToggle">
-                            {{ $dataset->is_public ?? false ? 'Public' : 'Private' }}
+                            <?php echo e($dataset->is_public ?? false ? 'Public' : 'Private'); ?>
+
                         </label>
                     </div>
                 </div>
@@ -47,15 +49,15 @@
             <!-- Description -->
             <div class="card mb-4">
                 <div class="card-body">
-                    <p class="card-text">{{ $dataset->description }}</p>
-                    @if(strlen($dataset->description) > 200)
+                    <p class="card-text"><?php echo e($dataset->description); ?></p>
+                    <?php if(strlen($dataset->description) > 200): ?>
                     <button class="btn btn-link btn-sm p-0" type="button" data-bs-toggle="collapse" data-bs-target="#fullDescription">
                         Show more
                     </button>
                     <div class="collapse" id="fullDescription">
-                        <p class="mt-2">{{ $dataset->description }}</p>
+                        <p class="mt-2"><?php echo e($dataset->description); ?></p>
                     </div>
-                    @endif
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -65,7 +67,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <h6 class="text-primary mb-2">Dataset Characteristics</h6>
-                            <p class="mb-0">{{ $dataset->characteristics ?? 'N/A' }}</p>
+                            <p class="mb-0"><?php echo e($dataset->characteristics ?? 'N/A'); ?></p>
                         </div>
                     </div>
                 </div>
@@ -73,7 +75,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <h6 class="text-primary mb-2">Subject Area</h6>
-                            <p class="mb-0">{{ $dataset->subjectArea->area_name ?? 'N/A' }}</p>
+                            <p class="mb-0"><?php echo e($dataset->subjectArea->area_name ?? 'N/A'); ?></p>
                         </div>
                     </div>
                 </div>
@@ -81,7 +83,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <h6 class="text-primary mb-2">Associated Tasks</h6>
-                            <p class="mb-0">{{ $dataset->task->task_name ?? 'N/A' }}</p>
+                            <p class="mb-0"><?php echo e($dataset->task->task_name ?? 'N/A'); ?></p>
                         </div>
                     </div>
                 </div>
@@ -89,7 +91,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <h6 class="text-primary mb-2">Feature Type</h6>
-                            <p class="mb-0">{{ $dataset->feature_type ?? 'N/A' }}</p>
+                            <p class="mb-0"><?php echo e($dataset->feature_type ?? 'N/A'); ?></p>
                         </div>
                     </div>
                 </div>
@@ -97,7 +99,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <h6 class="text-primary mb-2"># Instances</h6>
-                            <p class="mb-0">{{ number_format($dataset->num_instances ?? 0) }}</p>
+                            <p class="mb-0"><?php echo e(number_format($dataset->num_instances ?? 0)); ?></p>
                         </div>
                     </div>
                 </div>
@@ -105,7 +107,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <h6 class="text-primary mb-2"># Features</h6>
-                            <p class="mb-0">{{ number_format($dataset->num_features ?? 0) }}</p>
+                            <p class="mb-0"><?php echo e(number_format($dataset->num_features ?? 0)); ?></p>
                         </div>
                     </div>
                 </div>
@@ -127,16 +129,18 @@
                                 <strong>Has Missing Values?</strong>
                             </div>
                             <div class="col-md-6">
-                                {{ $dataset->has_missing_values ? 'Yes' : 'No' }}
+                                <?php echo e($dataset->has_missing_values ? 'Yes' : 'No'); ?>
+
                             </div>
                         </div>
-                        @if(!empty($descriptiveInfo))
+                        <?php if(!empty($descriptiveInfo)): ?>
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <strong>Purpose</strong>
                             </div>
                             <div class="col-md-6">
-                                {{ $descriptiveInfo['purpose'] ?? 'N/A' }}
+                                <?php echo e($descriptiveInfo['purpose'] ?? 'N/A'); ?>
+
                             </div>
                         </div>
                         <div class="row mb-3">
@@ -144,16 +148,17 @@
                                 <strong>Instances Represent</strong>
                             </div>
                             <div class="col-md-6">
-                                {{ $descriptiveInfo['instances_represent'] ?? 'N/A' }}
+                                <?php echo e($descriptiveInfo['instances_represent'] ?? 'N/A'); ?>
+
                             </div>
                         </div>
-                        @endif
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
 
             <!-- Introductory Paper -->
-            @if($dataset->papers->isNotEmpty())
+            <?php if($dataset->papers->isNotEmpty()): ?>
             <div class="card mb-4">
                 <div class="card-header bg-light">
                     <h5 class="mb-0">
@@ -164,24 +169,25 @@
                 </div>
                 <div id="paperSection" class="collapse show">
                     <div class="card-body">
-                        @foreach($dataset->papers as $paper)
+                        <?php $__currentLoopData = $dataset->papers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $paper): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                         <div class="mb-3">
                             <h6>
-                                <a href="{{ $paper->paper_url ?? '#' }}" target="_blank" class="text-decoration-none">
-                                    {{ $paper->title }}
+                                <a href="<?php echo e($paper->paper_url ?? '#'); ?>" target="_blank" class="text-decoration-none">
+                                    <?php echo e($paper->title); ?>
+
                                 </a>
                             </h6>
-                            <p class="mb-1 text-muted">By {{ $paper->authors }}</p>
-                            <p class="mb-0 small">Published in {{ $paper->venue ?? 'N/A' }}, {{ $paper->publication_year }}</p>
+                            <p class="mb-1 text-muted">By <?php echo e($paper->authors); ?></p>
+                            <p class="mb-0 small">Published in <?php echo e($paper->venue ?? 'N/A'); ?>, <?php echo e($paper->publication_year); ?></p>
                         </div>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </div>
                 </div>
             </div>
-            @endif
+            <?php endif; ?>
 
             <!-- Dataset Files -->
-            @if($dataset->files->isNotEmpty())
+            <?php if($dataset->files->isNotEmpty()): ?>
             <div class="card mb-4">
                 <div class="card-header bg-light">
                     <h5 class="mb-0">
@@ -202,32 +208,32 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($dataset->files as $file)
+                                <?php $__currentLoopData = $dataset->files; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $file): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                 <tr>
-                                    <td>{{ $file->original_filename }}</td>
-                                    <td>{{ $file->file_size }}</td>
-                                    <td><span class="badge bg-secondary">{{ strtoupper($file->file_format) }}</span></td>
+                                    <td><?php echo e($file->original_filename); ?></td>
+                                    <td><?php echo e($file->file_size); ?></td>
+                                    <td><span class="badge bg-secondary"><?php echo e(strtoupper($file->file_format)); ?></span></td>
                                     <td>
-                                        <a href="{{ route('datasets.download', [$dataset, $file]) }}" class="btn btn-sm btn-outline-primary">
+                                        <a href="<?php echo e(route('datasets.download', [$dataset, $file])); ?>" class="btn btn-sm btn-outline-primary">
                                             <i class="bi bi-download"></i>
                                         </a>
                                     </td>
                                 </tr>
-                                @endforeach
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
-            @endif
+            <?php endif; ?>
 
             <!-- Variables -->
-            @if($dataset->variables->isNotEmpty())
+            <?php if($dataset->variables->isNotEmpty()): ?>
             <div class="card mb-4">
                 <div class="card-header bg-light">
                     <h5 class="mb-0">
                         <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#variablesSection">
-                            Variables ({{ $dataset->variables->count() }}) <i class="bi bi-chevron-down ms-1"></i>
+                            Variables (<?php echo e($dataset->variables->count()); ?>) <i class="bi bi-chevron-down ms-1"></i>
                         </button>
                     </h5>
                 </div>
@@ -243,20 +249,20 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($dataset->variables as $var)
+                                <?php $__currentLoopData = $dataset->variables; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $var): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                 <tr>
-                                    <td><strong>{{ $var->variable_name }}</strong></td>
-                                    <td><span class="badge bg-info">{{ $var->role }}</span></td>
-                                    <td>{{ $var->type }}</td>
-                                    <td>{{ $var->description ?? '-' }}</td>
+                                    <td><strong><?php echo e($var->variable_name); ?></strong></td>
+                                    <td><span class="badge bg-info"><?php echo e($var->role); ?></span></td>
+                                    <td><?php echo e($var->type); ?></td>
+                                    <td><?php echo e($var->description ?? '-'); ?></td>
                                 </tr>
-                                @endforeach
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
-            @endif
+            <?php endif; ?>
         </div>
 
         <!-- Sidebar -->
@@ -265,7 +271,7 @@
             <div class="card mb-4">
                 <div class="card-body">
                     <button class="btn btn-primary w-100 mb-2">
-                        <i class="bi bi-download me-2"></i>DOWNLOAD ({{ $dataset->files->sum('file_size_bytes') ? number_format($dataset->files->sum('file_size_bytes') / 1024, 1) . ' KB' : 'N/A' }})
+                        <i class="bi bi-download me-2"></i>DOWNLOAD (<?php echo e($dataset->files->sum('file_size_bytes') ? number_format($dataset->files->sum('file_size_bytes') / 1024, 1) . ' KB' : 'N/A'); ?>)
                     </button>
                     <button class="btn btn-warning w-100 mb-3">
                         <i class="bi bi-quote me-2"></i>CITE
@@ -273,10 +279,10 @@
                     
                     <div class="border-top pt-3">
                         <div class="d-flex justify-content-between mb-2">
-                            <span><i class="bi bi-chat-quote me-2"></i>{{ $totalCitations }} citations</span>
+                            <span><i class="bi bi-chat-quote me-2"></i><?php echo e($totalCitations); ?> citations</span>
                         </div>
                         <div class="d-flex justify-content-between">
-                            <span><i class="bi bi-eye me-2"></i>{{ $totalViews }} views</span>
+                            <span><i class="bi bi-eye me-2"></i><?php echo e($totalViews); ?> views</span>
                         </div>
                     </div>
                 </div>
@@ -288,13 +294,14 @@
                     <h6 class="mb-0">DOI</h6>
                 </div>
                 <div class="card-body">
-                    @if($dataset->doi)
-                    <a href="{{ $dataset->doi->resolution_url }}" target="_blank" class="text-decoration-none">
-                        {{ $dataset->doi->doi_string }}
+                    <?php if($dataset->doi): ?>
+                    <a href="<?php echo e($dataset->doi->resolution_url); ?>" target="_blank" class="text-decoration-none">
+                        <?php echo e($dataset->doi->doi_string); ?>
+
                     </a>
-                    @else
+                    <?php else: ?>
                     <span class="text-muted">0</span>
-                    @endif
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -317,26 +324,26 @@
             </div>
 
             <!-- Creators -->
-            @if($dataset->creators && $dataset->creators->isNotEmpty())
+            <?php if($dataset->creators && $dataset->creators->isNotEmpty()): ?>
             <div class="card mb-4">
                 <div class="card-header bg-light">
-                    <h6 class="mb-0">Creators ({{ $dataset->creators->count() }})</h6>
+                    <h6 class="mb-0">Creators (<?php echo e($dataset->creators->count()); ?>)</h6>
                 </div>
                 <div class="card-body">
-                    @foreach($dataset->creators as $creator)
+                    <?php $__currentLoopData = $dataset->creators; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $creator): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                     <div class="mb-2">
-                        <strong>{{ $creator->name }}</strong>
-                        @if($creator->pivot->contribution_role)
-                        <span class="badge bg-secondary ms-1">{{ $creator->pivot->contribution_role }}</span>
-                        @endif
-                        @if($creator->affiliation)
-                        <div class="small text-muted">{{ $creator->affiliation }}</div>
-                        @endif
+                        <strong><?php echo e($creator->name); ?></strong>
+                        <?php if($creator->pivot->contribution_role): ?>
+                        <span class="badge bg-secondary ms-1"><?php echo e($creator->pivot->contribution_role); ?></span>
+                        <?php endif; ?>
+                        <?php if($creator->affiliation): ?>
+                        <div class="small text-muted"><?php echo e($creator->affiliation); ?></div>
+                        <?php endif; ?>
                     </div>
-                    @endforeach
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </div>
             </div>
-            @endif
+            <?php endif; ?>
 
             <!-- Status -->
             <div class="card mb-4">
@@ -344,41 +351,43 @@
                     <h6 class="mb-0">Submission Status</h6>
                 </div>
                 <div class="card-body">
-                    @php
+                    <?php
                         $status = $dataset->status ?? 'pending';
                         $statusClass = [
                             'approved' => 'success',
                             'pending' => 'warning',
                             'rejected' => 'danger'
                         ][$status] ?? 'secondary';
-                    @endphp
-                    <span class="badge bg-{{ $statusClass }} fs-6">
-                        {{ strtoupper($status) }}
+                    ?>
+                    <span class="badge bg-<?php echo e($statusClass); ?> fs-6">
+                        <?php echo e(strtoupper($status)); ?>
+
                     </span>
-                    @if($dataset->admin_notes)
+                    <?php if($dataset->admin_notes): ?>
                     <div class="mt-2 small text-muted">
                         <strong>Admin Notes:</strong><br>
-                        {{ $dataset->admin_notes }}
+                        <?php echo e($dataset->admin_notes); ?>
+
                     </div>
-                    @endif
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 // Visibility toggle
 document.getElementById('visibilityToggle')?.addEventListener('change', function() {
     const isPublic = this.checked;
     // Make AJAX call to update visibility
-    fetch('{{ route("profile.dataset.update-visibility", $dataset) }}', {
+    fetch('<?php echo e(route("profile.dataset.update-visibility", $dataset)); ?>', {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({ is_public: isPublic })
     })
@@ -390,4 +399,5 @@ document.getElementById('visibilityToggle')?.addEventListener('change', function
     });
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Downloads\tesdataset-app (4)\tesdataset-app (3)\TB-K6-UCI-DATASET\resources\views/profile/dataset-detail.blade.php ENDPATH**/ ?>

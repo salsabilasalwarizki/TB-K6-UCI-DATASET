@@ -6,45 +6,73 @@ use App\Http\Controllers\Controller;
 use App\Models\Dataset;
 use App\Models\User;
 use App\Models\Paper;
+use App\Models\Download;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class AdminDashboardController extends Controller
 {
+    /**
+     * Tampilan Utama Admin Dashboard
+     */
     public function index()
     {
-        // Statistics
+        // 1. STATISTIK UTAMA (Stats Cards)
         $stats = [
             'total_datasets' => Dataset::count(),
             'pending_datasets' => Dataset::where('status', 'pending')->count(),
             'approved_datasets' => Dataset::where('status', 'approved')->count(),
             'rejected_datasets' => Dataset::where('status', 'rejected')->count(),
-            'total_users' => User::where('role', 'user')->count(),
-            'total_admins' => User::whereIn('role', ['admin', 'superadmin'])->count(),
+            'total_users' => User::count(),
         ];
 
-        // Recent datasets pending review
-        $pendingDatasets = Dataset::with(['user', 'contributors'])
+        // 2. DAFTAR DATASET PENDING (Tabel di Kiri)
+        // Mengambil 10 dataset terbaru yang statusnya pending
+        $pendingDatasets = Dataset::with(['contributors', 'files']) // Load relasi
             ->where('status', 'pending')
-            ->orderBy('donated_date', 'desc')
+            ->orderBy('created_at', 'desc')
             ->take(10)
             ->get();
 
-        // Recent activity
-        $recentActivity = Dataset::with('contributors')
+        // 3. AKTIVITAS TERAKHIR (Timeline di Kanan)
+        // Mengambil 5 dataset terbaru (apapun statusnya) untuk feed aktivitas
+        $recentActivity = Dataset::with(['user', 'contributors'])
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get();
 
-        // Monthly submissions chart data
+        // 4. DATA CHART (Grafik Bulanan)
+        // Mengambil jumlah dataset per bulan (6 bulan terakhir)
         $monthlySubmissions = Dataset::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
             ->groupBy('month')
             ->orderBy('month', 'desc')
             ->take(6)
             ->get()
             ->reverse()
-            ->values();
+            ->values(); // Reverse agar grafik berjalan dari kiri ke kanan
 
-        return view('admin.dashboard', compact('stats', 'pendingDatasets', 'recentActivity', 'monthlySubmissions'));
+        // Return View
+        return view('admin.dashboard', compact(
+            'stats', 
+            'pendingDatasets', 
+            'recentActivity', 
+            'monthlySubmissions'
+        ));
+    }
+
+    /**
+     * Metode tambahan untuk Update Statistik Real-time (Opsional)
+     */
+    public function getStats()
+    {
+        $stats = [
+            'total_datasets' => Dataset::count(),
+            'pending_datasets' => Dataset::where('status', 'pending')->count(),
+            'approved_datasets' => Dataset::where('status', 'approved')->count(),
+            'rejected_datasets' => Dataset::where('status', 'rejected')->count(),
+            'total_users' => User::count(),
+        ];
+
+        return response()->json($stats);
     }
 }

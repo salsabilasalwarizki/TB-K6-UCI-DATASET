@@ -192,4 +192,31 @@ class ProfileController extends Controller
         
         return view('profile.edits');
     }
+    /**
+ * Update dataset visibility
+ */
+public function updateVisibility(Dataset $dataset)
+{
+    // Pastikan user adalah pemilik dataset
+    if ($dataset->user_id !== auth()->id()) {
+        abort(403, 'Unauthorized action.');
+    }
+
+    $validated = request()->validate([
+        'is_public' => 'required|boolean',
+    ]);
+
+    // Update visibility (asumsikan ada kolom is_public atau similar)
+    // Jika tidak ada kolom is_public, mungkin menggunakan status atau kolom lain
+    $dataset->update([
+        'status' => $validated['is_public'] ? 'available' : 'pending',
+        // atau jika ada kolom is_public:
+        // 'is_public' => $validated['is_public'],
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Visibility updated successfully',
+    ]);
+}
 } 

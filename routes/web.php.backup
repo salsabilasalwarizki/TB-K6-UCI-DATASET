@@ -1,20 +1,172 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\{
+    HomeController,
+    DatasetController,
+    ProfileController,
+    ContributeController,
+    SocialAuthController,
+    PaperController
+};
+use App\Http\Controllers\Admin\{
+    AdminDashboardController,
+    AdminDatasetController,
+    AdminUserController,
+    AdminKeywordController,
+    StatisticsController
+};
 
-Route::get('/', function () {
-    return view('welcome');
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+*/
+
+// ===== 🌐 PUBLIC ROUTES =====
+
+// Home & About
+Route::get('/', [HomeController::class, 'index'])->name('home');
+
+Route::prefix('about')->group(function () {
+    Route::get('/', [HomeController::class, 'about'])->name('about');
+    Route::get('/who-we-are', [HomeController::class, 'whoWeAre'])->name('about.who-we-are');
+    Route::get('/citation', [HomeController::class, 'citation'])->name('about.citation');
+    Route::get('/contact', [HomeController::class, 'contact'])->name('about.contact');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+// Datasets (Public)
+Route::get('/datasets', [DatasetController::class, 'index'])->name('datasets.index');
+Route::get('/datasets/{dataset}', [DatasetController::class, 'show'])->name('datasets.show');
+Route::get('/datasets/{dataset}/files/{file}/download', [DatasetController::class, 'download'])
+     ->name('datasets.download')
+     ->middleware('throttle:30,1');
 
+// Dataset Interactions
+Route::prefix('datasets')->name('datasets.')->group(function() {
+    Route::post('/{dataset}/track-view', [DatasetController::class, 'trackView'])
+        ->name('track-view')
+        ->middleware('throttle:60,1');
+    
+    Route::post('/{dataset}/save', [DatasetController::class, 'save'])
+        ->name('save')
+        ->middleware(['auth', 'throttle:30,1']);
+    
+    Route::get('/{dataset}/preview', [DatasetController::class, 'preview'])->name('preview');
+});
+
+// Search
+Route::get('/search', function (\Illuminate\Http\Request $request) {
+    return redirect()->route('datasets.index', $request->only('q', 'task', 'area', 'instances'));
+})->name('search');
+
+// Contribute Policy
+Route::get('/contribute', [ContributeController::class, 'policy'])->name('contribute.policy');
+
+// ===== 🔑 SOCIALITE AUTH ROUTES (Public) =====
+Route::prefix('auth')->group(function () {
+    // Google OAuth - FIX: Hapus prefix /auth/ ganda
+    Route::get('/google/redirect', [SocialAuthController::class, 'redirectToGoogle'])->name('google.login');
+    Route::get('/google/callback', [SocialAuthController::class, 'handleGoogleCallback'])->name('google.callback');
+    
+    // GitHub OAuth
+    Route::get('/github/redirect', [SocialAuthController::class, 'redirectToGithub'])->name('github.login');
+    Route::get('/github/callback', [SocialAuthController::class, 'handleGithubCallback'])->name('github.callback');
+});
+
+// ===== 🔐 AUTHENTICATED ROUTES =====
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    
+    // Profile Routes
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::get('/', [ProfileController::class, 'index'])->name('index');
+        Route::put('/', [ProfileController::class, 'update'])->name('update');
+        Route::put('/password', [ProfileController::class, 'updatePassword'])->name('password');
+        Route::get('/datasets', [ProfileController::class, 'datasets'])->name('datasets');
+        Route::get('/dataset/{dataset}', [ProfileController::class, 'showDataset'])->name('dataset.show');
+        Route::put('/dataset/{dataset}/status', [ProfileController::class, 'updateDatasetStatus'])->name('dataset.update-status');
+        Route::get('/edits', [ProfileController::class, 'edits'])->name('edits');
+    });
+    
+    // Contribute Donation Flow
+    Route::prefix('contribute/donation')->name('contribute.')->group(function () {
+        Route::get('/metadata', [ContributeController::class, 'createMetadata'])->name('metadata');
+        Route::post('/metadata', [ContributeController::class, 'storeMetadata'])->name('metadata.store');
+        
+        Route::get('/paper', [ContributeController::class, 'createPaper'])->name('paper');
+        Route::post('/paper', [ContributeController::class, 'storePaper'])->name('paper.store');
+        
+        Route::get('/creators', [ContributeController::class, 'createCreators'])->name('creators');
+        Route::post('/creators', [ContributeController::class, 'storeCreators'])->name('creators.store');
+        
+        Route::get('/files', [ContributeController::class, 'createFiles'])->name('files');
+        Route::post('/files', [ContributeController::class, 'storeFiles'])->name('files.store');
+        
+        Route::get('/keywords', [ContributeController::class, 'createKeywords'])->name('keywords');
+        Route::post('/keywords', [ContributeController::class, 'storeKeywords'])->name('keywords.store');
+        
+        Route::get('/variable-info', [ContributeController::class, 'createVariableInfo'])->name('variable-info');
+        Route::post('/variable-info', [ContributeController::class, 'storeVariableInfo'])->name('variable-info.store');
+        
+        Route::get('/descriptive', [ContributeController::class, 'createDescriptive'])->name('descriptive');
+        Route::post('/submit', [ContributeController::class, 'submitDonation'])->name('submit');
+    });
+    
+    // External Link Routes
+    Route::get('/contribute/external/form', [ContributeController::class, 'createExternalLink'])->name('contribute.external.form');
+    Route::post('/contribute/external/submit', [ContributeController::class, 'submitExternalLink'])->name('contribute.external.submit');
+    
+    // Linking Routes
+    Route::prefix('contribute/linking')->name('contribute.linking.')->group(function () {
+        Route::get('/', function () { return view('linking.policy'); })->name('index');
+        Route::get('/metadata', [ContributeController::class, 'createLinkingMetadata'])->name('metadata');
+        Route::post('/metadata', [ContributeController::class, 'storeLinkingMetadata'])->name('metadata.store');
+        Route::get('/paper', [ContributeController::class, 'createLinkingPaper'])->name('paper');
+        Route::post('/paper', [ContributeController::class, 'storeLinkingPaper'])->name('paper.store');
+        Route::get('/creators', [ContributeController::class, 'createLinkingCreators'])->name('creators');
+        Route::post('/creators', [ContributeController::class, 'storeLinkingCreators'])->name('creators.store');
+        Route::get('/keywords', [ContributeController::class, 'createLinkingKeywords'])->name('keywords');
+        Route::post('/keywords', [ContributeController::class, 'storeLinkingKeywords'])->name('keywords.store');
+        Route::get('/variable-info', [ContributeController::class, 'createLinkingVariableInfo'])->name('variable-info');
+        Route::post('/variable-info', [ContributeController::class, 'storeLinkingVariableInfo'])->name('variable-info.store');
+        Route::get('/descriptive', [ContributeController::class, 'createLinkingDescriptive'])->name('descriptive');
+        Route::post('/submit', [ContributeController::class, 'submitLinking'])->name('submit');
+    });
 });
 
+// ===== 👮 ADMIN ROUTES =====
+Route::middleware(['auth', 'role:admin,superadmin'])->prefix('admin')->name('admin.')->group(function () {
+    
+    // Dashboard
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    
+    // Statistics
+    Route::get('/statistics', [StatisticsController::class, 'index'])->name('statistics');
+    
+    // Datasets CRUD
+    Route::resource('datasets', AdminDatasetController::class)->except(['show']);
+    Route::post('datasets/{dataset}/approve', [AdminDatasetController::class, 'approve'])->name('datasets.approve');
+    Route::post('datasets/{dataset}/reject', [AdminDatasetController::class, 'reject'])->name('datasets.reject');
+    Route::post('datasets/bulk-action', [AdminDatasetController::class, 'bulkAction'])->name('datasets.bulk-action');
+    Route::get('datasets/export', [AdminDatasetController::class, 'export'])->name('datasets.export');
+    
+    // Users CRUD
+    Route::resource('users', AdminUserController::class)->except(['show']);
+    Route::post('users/{user}/toggle-ban', [AdminUserController::class, 'toggleBan'])->name('users.toggle-ban');
+    Route::post('users/bulk-action', [AdminUserController::class, 'bulkAction'])->name('users.bulk-action');
+    Route::get('users/export', [AdminUserController::class, 'export'])->name('users.export');
+    
+    // Keywords CRUD
+    Route::resource('keywords', AdminKeywordController::class)->except(['show']);
+    
+    // Papers Upload
+    Route::post('/papers/upload', [PaperController::class, 'upload'])->name('papers.upload');
+});
+
+// ===== 🔄 HELPER & ALIASES =====
+Route::redirect('/dashboard', '/')->name('dashboard.redirect');
+Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
+Route::get('/profile/datasets', [ProfileController::class, 'datasets'])->name('profile.datasets');
+
+// ===== 🔐 LARAVEL BREEZE AUTH =====
 require __DIR__.'/auth.php';

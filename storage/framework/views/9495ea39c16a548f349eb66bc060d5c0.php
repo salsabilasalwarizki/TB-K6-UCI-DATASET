@@ -1,8 +1,8 @@
-@extends('layouts.admin')
-@section('title', 'Admin Dashboard')
-@section('page-title', 'Dashboard')
 
-@section('content')
+<?php $__env->startSection('title', 'Admin Dashboard'); ?>
+<?php $__env->startSection('page-title', 'Dashboard'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="admin-dashboard">
     
     <!-- Page Header -->
@@ -14,10 +14,10 @@
             <p class="text-muted mb-0 small">Manage datasets, users, and repository settings</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ route('datasets.index') }}" class="btn btn-outline-primary btn-sm">
+            <a href="<?php echo e(route('datasets.index')); ?>" class="btn btn-outline-primary btn-sm">
                 <i class="bi bi-grid me-1"></i>View All Datasets
             </a>
-            <a href="{{ route('contribute.policy') }}" class="btn btn-primary btn-sm">
+            <a href="<?php echo e(route('contribute.policy')); ?>" class="btn btn-primary btn-sm">
                 <i class="bi bi-plus-circle me-1"></i>New Donation
             </a>
         </div>
@@ -34,7 +34,7 @@
                     </div>
                     <div>
                         <h6 class="text-muted small mb-1">Total Datasets</h6>
-                        <h3 class="fw-bold mb-0">{{ number_format($stats['total_datasets'] ?? 0) }}</h3>
+                        <h3 class="fw-bold mb-0"><?php echo e(number_format($stats['total_datasets'] ?? 0)); ?></h3>
                     </div>
                 </div>
             </div>
@@ -49,16 +49,16 @@
                     </div>
                     <div>
                         <h6 class="text-muted small mb-1">Pending Review</h6>
-                        <h3 class="fw-bold mb-0">{{ number_format($stats['pending_datasets'] ?? 0) }}</h3>
+                        <h3 class="fw-bold mb-0"><?php echo e(number_format($stats['pending_datasets'] ?? 0)); ?></h3>
                     </div>
                 </div>
-                @if(($stats['pending_datasets'] ?? 0) > 0)
+                <?php if(($stats['pending_datasets'] ?? 0) > 0): ?>
                 <div class="card-footer bg-transparent border-0 pt-0">
-                    <a href="{{ route('datasets.index', ['status' => 'pending']) }}" class="small text-warning text-decoration-none">
+                    <a href="<?php echo e(route('datasets.index', ['status' => 'pending'])); ?>" class="small text-warning text-decoration-none">
                         Review now <i class="bi bi-arrow-right"></i>
                     </a>
                 </div>
-                @endif
+                <?php endif; ?>
             </div>
         </div>
         
@@ -71,7 +71,7 @@
                     </div>
                     <div>
                         <h6 class="text-muted small mb-1">Approved</h6>
-                        <h3 class="fw-bold mb-0">{{ number_format($stats['approved_datasets'] ?? 0) }}</h3>
+                        <h3 class="fw-bold mb-0"><?php echo e(number_format($stats['approved_datasets'] ?? 0)); ?></h3>
                     </div>
                 </div>
             </div>
@@ -86,7 +86,7 @@
                     </div>
                     <div>
                         <h6 class="text-muted small mb-1">Total Users</h6>
-                        <h3 class="fw-bold mb-0">{{ number_format($stats['total_users'] ?? 0) }}</h3>
+                        <h3 class="fw-bold mb-0"><?php echo e(number_format($stats['total_users'] ?? 0)); ?></h3>
                     </div>
                 </div>
             </div>
@@ -101,14 +101,14 @@
             <div class="card h-100 border-0 shadow-sm">
                 <div class="card-header bg-white border-0 py-3 px-4 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-semibold">
-                        <i class="bi bi-inbox me-2 text-warning"></i>Pending Review ({{ count($pendingDatasets) }})
+                        <i class="bi bi-inbox me-2 text-warning"></i>Pending Review (<?php echo e(count($pendingDatasets)); ?>)
                     </h5>
-                    <a href="{{ route('datasets.index', ['status' => 'pending']) }}" class="btn btn-sm btn-outline-primary">
+                    <a href="<?php echo e(route('datasets.index', ['status' => 'pending'])); ?>" class="btn btn-sm btn-outline-primary">
                         View All <i class="bi bi-arrow-right ms-1"></i>
                     </a>
                 </div>
                 <div class="card-body p-0">
-                    @if($pendingDatasets->isNotEmpty())
+                    <?php if($pendingDatasets->isNotEmpty()): ?>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="bg-light">
@@ -121,55 +121,57 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($pendingDatasets as $dataset)
+                                <?php $__currentLoopData = $pendingDatasets; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $dataset): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                 <tr>
                                     <td class="ps-4">
                                         <div class="d-flex align-items-center gap-3">
-                                            @if($dataset->thumbnail_url)
-                                            <img src="{{ $dataset->thumbnail_url }}" alt="" class="rounded" style="width: 40px; height: 40px; object-fit: cover;">
-                                            @else
+                                            <?php if($dataset->thumbnail_url): ?>
+                                            <img src="<?php echo e($dataset->thumbnail_url); ?>" alt="" class="rounded" style="width: 40px; height: 40px; object-fit: cover;">
+                                            <?php else: ?>
                                             <div class="bg-primary bg-opacity-10 rounded d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
                                                 <i class="bi bi-database text-primary"></i>
                                             </div>
-                                            @endif
+                                            <?php endif; ?>
                                             <div>
-                                                <a href="{{ route('datasets.show', $dataset) }}" class="fw-semibold text-decoration-none text-dark">
-                                                    {{ Str::limit($dataset->name, 30) }}
+                                                <a href="<?php echo e(route('datasets.show', $dataset)); ?>" class="fw-semibold text-decoration-none text-dark">
+                                                    <?php echo e(Str::limit($dataset->name, 30)); ?>
+
                                                 </a>
-                                                @if($dataset->subject_area)
-                                                <div class="small text-muted">{{ $dataset->subject_area }}</div>
-                                                @endif
+                                                <?php if($dataset->subject_area): ?>
+                                                <div class="small text-muted"><?php echo e($dataset->subject_area); ?></div>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
                                         <small class="text-muted">
-                                            {{ $dataset->donated_date?->format('M d, Y') ?? 'N/A' }}
+                                            <?php echo e($dataset->donated_date?->format('M d, Y') ?? 'N/A'); ?>
+
                                         </small>
                                     </td>
                                     <td>
-                                        @php
+                                        <?php
                                             $donator = $dataset->contributors->firstWhere('pivot.contribution_role', 'donor') 
                                                 ?? $dataset->contributors->first();
-                                        @endphp
-                                        @if($donator)
-                                        <small>{{ $donator->name }}</small>
-                                        @else
+                                        ?>
+                                        <?php if($donator): ?>
+                                        <small><?php echo e($donator->name); ?></small>
+                                        <?php else: ?>
                                         <small class="text-muted">Unknown</small>
-                                        @endif
+                                        <?php endif; ?>
                                     </td>
                                     <td>
-                                        @if($dataset->data_type)
-                                        <span class="badge bg-info-subtle text-info border border-info-subtle">{{ $dataset->data_type }}</span>
-                                        @endif
+                                        <?php if($dataset->data_type): ?>
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle"><?php echo e($dataset->data_type); ?></span>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="text-end pe-4">
                                         <div class="btn-group btn-group-sm">
-                                            <a href="{{ route('datasets.show', $dataset) }}" class="btn btn-outline-secondary" title="View">
+                                            <a href="<?php echo e(route('datasets.show', $dataset)); ?>" class="btn btn-outline-secondary" title="View">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            <form action="{{ route('admin.datasets.approve', $dataset) }}" method="POST" class="d-inline">
-    @csrf
+                                            <form action="<?php echo e(route('admin.datasets.approve', $dataset)); ?>" method="POST" class="d-inline">
+    <?php echo csrf_field(); ?>
     <button type="submit" class="btn btn-outline-success" title="Approve" onclick="return confirm('Approve this dataset?')">
         <i class="bi bi-check"></i>
     </button>
@@ -177,17 +179,17 @@
                                         </div>
                                     </td>
                                 </tr>
-                                @endforeach
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </tbody>
                         </table>
                     </div>
-                    @else
+                    <?php else: ?>
                     <div class="text-center py-5">
                         <i class="bi bi-inbox fs-1 text-muted opacity-25"></i>
                         <p class="text-muted mt-3 mb-0">No pending datasets</p>
                         <small class="text-muted">All caught up! 🎉</small>
                     </div>
-                    @endif
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -216,34 +218,37 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush">
-                        @forelse($recentActivity as $activity)
-                        <a href="{{ route('datasets.show', $activity) }}" class="list-group-item list-group-item-action px-4 py-3">
+                        <?php $__empty_1 = true; $__currentLoopData = $recentActivity; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $activity): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <a href="<?php echo e(route('datasets.show', $activity)); ?>" class="list-group-item list-group-item-action px-4 py-3">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div class="flex-grow-1">
                                     <div class="d-flex align-items-center gap-2 mb-1">
                                         <i class="bi bi-plus-circle text-success"></i>
                                         <span class="fw-semibold text-dark">
-                                            {{ Str::limit($activity->name, 25) }}
+                                            <?php echo e(Str::limit($activity->name, 25)); ?>
+
                                         </span>
                                     </div>
                                     <small class="text-muted">
-                                        Added {{ $activity->created_at?->diffForHumans() ?? 'recently' }}
-                                        @if($activity->status !== 'available')
-                                        • <span class="badge bg-{{ $activity->status === 'pending' ? 'warning' : 'secondary' }} bg-opacity-75">
-                                            {{ ucfirst($activity->status) }}
+                                        Added <?php echo e($activity->created_at?->diffForHumans() ?? 'recently'); ?>
+
+                                        <?php if($activity->status !== 'available'): ?>
+                                        • <span class="badge bg-<?php echo e($activity->status === 'pending' ? 'warning' : 'secondary'); ?> bg-opacity-75">
+                                            <?php echo e(ucfirst($activity->status)); ?>
+
                                         </span>
-                                        @endif
+                                        <?php endif; ?>
                                     </small>
                                 </div>
                                 <i class="bi bi-chevron-right text-muted small"></i>
                             </div>
                         </a>
-                        @empty
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <div class="p-4 text-center text-muted small">
                             <i class="bi bi-clock-history fs-4 d-block mb-2 opacity-50"></i>
                             No recent activity
                         </div>
-                        @endforelse
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -254,13 +259,13 @@
     <!-- Quick Actions Footer -->
     <div class="mt-4 pt-3 border-top">
         <div class="d-flex flex-wrap gap-2 justify-content-center">
-            <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary btn-sm">
+            <a href="<?php echo e(route('admin.users.index')); ?>" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-people me-1"></i>Manage Users
             </a>
-            <a href="{{ route('datasets.index') }}" class="btn btn-outline-secondary btn-sm">
+            <a href="<?php echo e(route('datasets.index')); ?>" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-grid me-1"></i>Browse Datasets
             </a>
-            <a href="{{ route('profile') }}" class="btn btn-outline-secondary btn-sm">
+            <a href="<?php echo e(route('profile')); ?>" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-gear me-1"></i>Settings
             </a>
             <button class="btn btn-outline-danger btn-sm" onclick="if(confirm('Clear cache?')) location.reload()">
@@ -269,9 +274,9 @@
         </div>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('styles')
+<?php $__env->startPush('styles'); ?>
 <style>
     .admin-dashboard {
         background: #f8f9fa;
@@ -370,16 +375,16 @@
         }
     }
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Monthly Submissions Chart
     const ctx = document.getElementById('submissionsChart');
     if (ctx) {
-        const monthlyData = @json($monthlySubmissions ?? []);
+        const monthlyData = <?php echo json_encode($monthlySubmissions ?? [], 15, 512) ?>;
         
         if (monthlyData.length > 0) {
             const labels = monthlyData.map(item => {
@@ -455,4 +460,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+<?php echo $__env->make('layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Downloads\tesdataset-app (4)\tesdataset-app (3)\TB-K6-UCI-DATASET\resources\views/admin/dashboard.blade.php ENDPATH**/ ?>

@@ -65,7 +65,6 @@ Route::get('/contribute', [ContributeController::class, 'policy'])->name('contri
 // ===== 🔐 AUTHENTICATED ROUTES (Login Required) =====
 Route::middleware('auth')->group(function () {
     
-   // Profile Routes
 Route::middleware('auth')->prefix('profile')->name('profile.')->group(function () {
     Route::get('/', [ProfileController::class, 'index'])->name('index');
     Route::put('/', [ProfileController::class, 'update'])->name('update');
@@ -73,6 +72,10 @@ Route::middleware('auth')->prefix('profile')->name('profile.')->group(function (
     Route::get('/datasets', [ProfileController::class, 'datasets'])->name('datasets');
     Route::get('/dataset/{dataset}', [ProfileController::class, 'showDataset'])->name('dataset.show');
     Route::put('/dataset/{dataset}/status', [ProfileController::class, 'updateDatasetStatus'])->name('dataset.update-status');
+    
+    // ✅ TAMBAHKAN ROUTE INI:
+    Route::put('/dataset/{dataset}/visibility', [ProfileController::class, 'updateVisibility'])->name('dataset.update-visibility');
+    
     Route::get('/edits', [ProfileController::class, 'edits'])->name('edits');
 });
     
@@ -199,39 +202,39 @@ Route::get('/contribute/linking/descriptive', [ContributeController::class, 'cre
 Route::post('/contribute/linking/submit', [ContributeController::class, 'submitLinking'])
     ->name('contribute.linking.submit')
     ->middleware('auth');
-
-// Admin Routes
-Route::middleware(['auth', 'role:admin,superadmin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    
+    // Dashboard
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     
-    // Datasets CRUD
-    Route::resource('datasets', AdminDatasetController::class)->except(['show']);
+    // Dataset Review
+    Route::prefix('datasets')->name('datasets.')->group(function () {
+        Route::get('/', [DatasetReviewController::class, 'index'])->name('index');
+        Route::get('/{dataset}', [DatasetReviewController::class, 'show'])->name('show');
+        Route::get('/{dataset}/review', [DatasetReviewController::class, 'show'])->name('review');
+        // Route::post('/{dataset}/approve', [DatasetReviewController::class, 'approve'])->name('approve');
+        // Route::post('/{dataset}/reject', [DatasetReviewController::class, 'reject'])->name('reject');
+        // Route::post('/{dataset}/pending', [DatasetReviewController::class, 'setPending'])->name('pending');
+        Route::post('/bulk-approve', [DatasetReviewController::class, 'bulkApprove'])->name('bulk-approve');
+    });
+    // Approve/Reject Dataset
     Route::post('datasets/{dataset}/approve', [AdminDatasetController::class, 'approve'])->name('datasets.approve');
     Route::post('datasets/{dataset}/reject', [AdminDatasetController::class, 'reject'])->name('datasets.reject');
-    Route::post('datasets/bulk-action', [AdminDatasetController::class, 'bulkAction'])->name('datasets.bulk-action');
-    Route::get('datasets/export', [AdminDatasetController::class, 'export'])->name('datasets.export');
+    // User Management
+    Route::prefix('users')->name('users.')->group(function () {
+        Route::get('/', [UserManagementController::class, 'index'])->name('index');
+        Route::get('/{user}', [UserManagementController::class, 'show'])->name('show');
+        Route::put('/{user}/role', [UserManagementController::class, 'updateRole'])->name('update-role');
+        Route::post('/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('toggle-status');
+    });
     
-    // Users CRUD
-    Route::resource('users', AdminUserController::class)->except(['show']);
-    Route::post('users/{user}/toggle-ban', [AdminUserController::class, 'toggleBan'])->name('users.toggle-ban');
-    Route::post('users/bulk-action', [AdminUserController::class, 'bulkAction'])->name('users.bulk-action');
-    Route::get('users/export', [AdminUserController::class, 'export'])->name('users.export');
-
-    // Admin Statistics Route
-Route::get('/statistics', function() {
-    // Statistics data
-    $stats = [
-        'total_datasets' => \App\Models\Dataset::count(),
-        'total_users' => \App\Models\User::count(),
-        'total_papers' => \App\Models\Paper::count(),
-        'pending_datasets' => \App\Models\Dataset::where('status', 'pending')->count(),
-        'approved_datasets' => \App\Models\Dataset::where('status', 'approved')->count(),
-    ];
+    // Statistics
+    Route::get('/statistics', [StatisticsController::class, 'index'])->name('statistics');
     
-    return view('admin.statistics', compact('stats'));
-})->name('admin.statistics');
-// Statistics Route
-Route::get('/statistics', [StatisticsController::class, 'index'])->name('statistics');
+    // Settings (optional)
+    Route::get('/settings', function() {
+        return view('admin.settings');
+    })->name('settings');
 });
 // routes/web.php
 Route::post('/admin/papers/upload', [PaperController::class, 'upload'])->name('admin.papers.upload');
