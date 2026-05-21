@@ -54,7 +54,7 @@
                         name="purpose" 
                         rows="3"
                         required
-                        placeholder="e.g., This dataset was created for research on machine learning algorithms for classification tasks...">{{ old('purpose', $data['purpose'] ?? '') }}</textarea>
+                        placeholder="e.g., This dataset was created for research on machine learning algorithms for classification tasks...">{{ old('purpose', $data['descriptive']['purpose'] ?? '') }}</textarea>
                 </div>
 
                 <!-- Funding -->
@@ -67,7 +67,7 @@
                         id="funding" 
                         name="funding" 
                         rows="2"
-                        placeholder="e.g., National Science Foundation (NSF), Google Research, etc.">{{ old('funding', $data['funding'] ?? '') }}</textarea>
+                        placeholder="e.g., National Science Foundation (NSF), Google Research, etc.">{{ old('funding', $data['descriptive']['funding'] ?? '') }}</textarea>
                 </div>
 
                 <!-- Instances Representation -->
@@ -81,7 +81,7 @@
                         name="instances_represent" 
                         rows="2"
                         required
-                        placeholder="e.g., documents, photos, people, countries, patients, transactions...">{{ old('instances_represent', $data['instances_represent'] ?? '') }}</textarea>
+                        placeholder="e.g., documents, photos, people, countries, patients, transactions...">{{ old('instances_represent', $data['descriptive']['instances_represent'] ?? '') }}</textarea>
                     <div class="form-hint">
                         e.g. documents, photos, people, countries
                     </div>
@@ -97,7 +97,7 @@
                         id="data_splits" 
                         name="data_splits" 
                         rows="2"
-                        placeholder="e.g., 70% training, 15% validation, 15% testing">{{ old('data_splits', $data['data_splits'] ?? '') }}</textarea>
+                        placeholder="e.g., 70% training, 15% validation, 15% testing">{{ old('data_splits', $data['descriptive']['data_splits'] ?? '') }}</textarea>
                     <div class="form-hint">
                         e.g. training, development/validation, testing
                     </div>
@@ -113,7 +113,7 @@
                         id="sensitive_data" 
                         name="sensitive_data" 
                         rows="3"
-                        placeholder="Describe any sensitive data present, or state 'None' if not applicable">{{ old('sensitive_data', $data['sensitive_data'] ?? 'None') }}</textarea>
+                        placeholder="Describe any sensitive data present, or state 'None' if not applicable">{{ old('sensitive_data', $data['descriptive']['sensitive_data'] ?? 'None') }}</textarea>
                     <div class="form-hint">
                         e.g. racial or ethnic origins, sexual orientations, religious beliefs, political opinions, or union memberships
                     </div>
@@ -129,7 +129,7 @@
                         id="preprocessing" 
                         name="preprocessing" 
                         rows="3"
-                        placeholder="Describe any preprocessing steps...">{{ old('preprocessing', $data['preprocessing'] ?? '') }}</textarea>
+                        placeholder="Describe any preprocessing steps...">{{ old('preprocessing', $data['descriptive']['preprocessing'] ?? '') }}</textarea>
                     <div class="form-hint">
                         e.g. discretization or bucketing, tokenization, part-of-speech tagging, SIFT feature extraction, removal of instances, processing of missing values
                     </div>
@@ -145,7 +145,7 @@
                         id="additional_info" 
                         name="additional_info" 
                         rows="3"
-                        placeholder="Please provide any additional information about your dataset.">{{ old('additional_info', $data['additional_info'] ?? '') }}</textarea>
+                        placeholder="Please provide any additional information about your dataset.">{{ old('additional_info', $data['descriptive']['additional_info'] ?? '') }}</textarea>
                 </div>
 
                 <!-- Citation Requests -->
@@ -158,7 +158,7 @@
                         id="citation_requests" 
                         name="citation_requests" 
                         rows="3"
-                        placeholder="e.g., Please cite this paper when using this dataset: Author et al., 'Title', Journal, Year">{{ old('citation_requests', $data['citation_requests'] ?? '') }}</textarea>
+                        placeholder="e.g., Please cite this paper when using this dataset: Author et al., 'Title', Journal, Year">{{ old('citation_requests', $data['descriptive']['citation_requests'] ?? '') }}</textarea>
                     <div class="form-hint mt-2">
                         <i class="bi bi-info-circle me-1"></i>
                         Remember that datasets in the repository are publicly available for use under a 
@@ -290,7 +290,7 @@
 </div>
 
 <!-- Loading Overlay (shown during submission) -->
-<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 9999; align-items: center; justify-content: center; flex-direction: column;">
     <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
         <span class="visually-hidden">Loading...</span>
     </div>
@@ -560,6 +560,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadingOverlay = document.getElementById('loadingOverlay');
     const confirmSubmitBtn = document.getElementById('confirmSubmitBtn');
     
+    // Hide loading overlay on page load
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'none';
+    }
+    
     // Show confirmation modal on submit button click
     submitBtn.addEventListener('click', function(e) {
         e.preventDefault();
@@ -591,7 +596,9 @@ document.addEventListener('DOMContentLoaded', function() {
         confirmModal.hide();
         
         // Show loading overlay
-        loadingOverlay.classList.add('show');
+        if (loadingOverlay) {
+            loadingOverlay.classList.add('show');
+        }
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
         
@@ -602,7 +609,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Show success modal if submission was successful (via session)
     @if(session('success'))
         // Hide loading overlay first if visible
-        loadingOverlay.classList.remove('show');
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('show');
+        }
         
         // Show success modal after a short delay for animation
         setTimeout(function() {
@@ -611,7 +620,9 @@ document.addEventListener('DOMContentLoaded', function() {
     @endif
     
     @if(session('error'))
-        loadingOverlay.classList.remove('show');
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('show');
+        }
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>SUBMIT DATASET';
         alert('Error: {{ session('error') }}');

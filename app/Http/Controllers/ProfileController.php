@@ -1,114 +1,195 @@
 <?php
+
 namespace App\Http\Controllers;
 
-use App\Models\{Dataset, Creator, Variable, File, Task, SubjectArea, License, Doi, Keyword, Paper};
+use App\Models\{Dataset, Person, Variable, File, Task, SubjectArea, License, Doi, Keyword, Paper};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ProfileController extends Controller
 {
+    /**
+     * Show user profile page
+     */
     public function index()
     {
-         $user = Auth::user();
+        $user = Auth::user();
         
         return view('profile.index', compact('user'));
     }
 
+    /**
+     * Update user profile information
+     */
     public function update(Request $request)
     {
-        // ... existing code ...
+        $user = Auth::user();
+        
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+            'affiliation' => 'nullable|string|max:255',
+            'bio' => 'nullable|string|max:1000',
+            'profile_picture' => 'nullable|image|max:2048',
+        ]);
+        
+        if ($request->hasFile('profile_picture')) {
+            if ($user->profile_picture) {
+                \Illuminate\Support\Facades\Storage::delete($user->profile_picture);
+            }
+            
+            $path = $request->file('profile_picture')->store('profile-pictures', 'public');
+            $validated['profile_picture'] = $path;
+        }
+        
+        $user->update($validated);
+        
+        return redirect()->back()->with('success', 'Profile updated successfully.');
     }
 
+    /**
+     * Update user password
+     */
     public function updatePassword(Request $request)
     {
-        // ... existing code ...
+        $validated = $request->validate([
+            'current_password' => 'required|current_password',
+            'password' => 'required|min:8|confirmed',
+        ]);
+        
+        $user = Auth::user();
+        $user->update([
+            'password' => bcrypt($validated['password']),
+        ]);
+        
+        return redirect()->back()->with('success', 'Password updated successfully.');
     }
 
     /**
      * Show user's donated datasets
      */
-  public function datasets()
-{
-    $user = Auth::user();
-    
-    // ✅ Filter langsung oleh user_id di tabel datasets (lebih simple & pasti works)
-    $datasets = Dataset::where('user_id', $user->id)
-        ->with(['task', 'subjectArea', 'creators', 'files'])
-        ->orderBy('donated_date', 'desc')
-        ->paginate(10);
-    
-    return view('profile.datasets', compact('datasets'));
-}
-   /**
- * Show dataset detail view
- */
-public function showDataset(Dataset $dataset)
-{
-    $user = Auth::user();
-    
-    // ✅ Cek ownership: apakah user ini ada di daftar creators (via pivot table)
-    $isOwner = $dataset->creators()->where('people.email', $user->email)
-        ->orWhere('people.name', $user->name)
-        ->exists();
-    
-    // Atau fallback: cek user_id di tabel datasets
-    if (!$isOwner && $dataset->user_id !== $user->id) {
-        abort(403, 'Unauthorized access.');
+    public function datasets()
+    {
+        $user = Auth::user();
+        
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Please login first.');
+        }
+        
+        // ✅ Load relationships dengan null safety
+        $datasets = Dataset::where('user_id', $user->id)
+            ->with(['task', 'subjectArea', 'contributors', 'files', 'license', 'doi'])
+            ->orderBy('donated_date', 'desc')
+            ->paginate(10);
+        
+        return view('profile.datasets', compact('datasets'));
     }
-    
-    // Load all relationships
-    $dataset->load([
-        'task',
-        'subjectArea', 
-        'license',
-        'doi',
-        'creators' => function($query) {
-            $query->withPivot('contribution_role');
-        },
-        'papers',
-        'keywords',
-        'files',
-        'variables'
-    ]);
-    
-    // Parse additional_info JSON
-    $additionalInfo = json_decode($dataset->additional_info ?? '{}', true) ?? [];
-    $descriptiveInfo = $additionalInfo['descriptive'] ?? [];
-    
-    // Calculate statistics
-    $totalViews = $dataset->view_count ?? 0;
-    $totalDownloads = $dataset->download_count ?? 0;
-    $totalCitations = $dataset->citation_count ?? 0;
-    
-    return view('profile.dataset-detail', compact(
-        'dataset',
-        'descriptiveInfo',
-        'totalViews',
-        'totalDownloads',
-        'totalCitations'
-    ));
-}
+
+    /**
+     * Show dataset detail view
+     */
+    public function showDataset(Dataset $dataset)
+    {
+        $user = Auth::user();
+        
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Please login first.');
+        }
+        
+        // ✅ Cek ownership dengan null safety
+        $isOwner = false;
+        
+        if ($dataset->user_id === $user->id) {
+            $isOwner = true;
+        } else {
+            // Cek via contributors
+            $isOwner = $dataset->contributors()
+                ->where('people.email', $user->email)
+                ->orWhere('people.name', $user->name)
+                ->exists();
+        }
+        
+        if (!$isOwner) {
+            abort(403, 'Unauthorized access.');
+        }
+        
+        // ✅ Load all relationships
+        $dataset->load([
+            'task',
+            'subjectArea', 
+            'license',
+            'doi',
+            'contributors' => function($query) {
+                $query->withPivot('contribution_role');
+            },
+            'papers',
+            'keywords',
+            'files',
+            'variables'
+        ]);
+        
+        // Parse additional_info JSON dengan null safety
+        $additionalInfo = json_decode($dataset->additional_info ?? '{}', true) ?? [];
+        $descriptiveInfo = $additionalInfo['descriptive'] ?? [];
+        
+        // Calculate statistics
+        $totalViews = $dataset->view_count ?? 0;
+        $totalDownloads = $dataset->download_count ?? 0;
+        $totalCitations = $dataset->citation_count ?? 0;
+        
+        return view('profile.dataset-detail', compact(
+            'dataset',
+            'descriptiveInfo',
+            'totalViews',
+            'totalDownloads',
+            'totalCitations'
+        ));
+    }
 
     /**
      * Update dataset status (for admin)
      */
     public function updateDatasetStatus(Request $request, Dataset $dataset)
     {
+        $user = Auth::user();
+        
+        // Check admin access
+        if (!($user->is_admin ?? false)) {
+            abort(403, 'Admin access required.');
+        }
+        
         $validated = $request->validate([
-            'status' => 'required|in:pending,approved,rejected',
+            'status' => 'required|in:pending,approved,rejected,available',
             'admin_notes' => 'nullable|string|max:1000',
         ]);
         
-        $dataset->update([
+        $updateData = [
             'status' => $validated['status'],
             'admin_notes' => $validated['admin_notes'] ?? null,
-        ]);
+        ];
+        
+        if ($validated['status'] === 'approved') {
+            $updateData['approved_at'] = now();
+            $updateData['approved_by'] = Auth::id();
+        }
+        
+        if ($validated['status'] === 'rejected') {
+            $updateData['rejected_at'] = now();
+            $updateData['rejected_by'] = Auth::id();
+        }
+        
+        $dataset->update($updateData);
         
         return redirect()->back()->with('success', 'Dataset status updated successfully.');
     }
 
+    /**
+     * Show user's dataset edits/submissions
+     */
     public function edits()
     {
+        $user = Auth::user();
+        
         return view('profile.edits');
     }
-}
+} 

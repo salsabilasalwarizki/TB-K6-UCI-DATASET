@@ -40,6 +40,7 @@
         <!-- Form -->
         <form action="{{ route('contribute.files.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
+            <input type="file" name="files[]" multiple required class="form-control">
 
             <!-- File Format Selection -->
             <div class="form-card">
