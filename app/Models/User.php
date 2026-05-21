@@ -2,60 +2,76 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+    protected $primaryKey = 'id';
+    
     protected $fillable = [
-    'name',
-    'email',
-    'password',
-    'institution',
-    'institution_address',
-];
-
-
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
+        'name',
+        'email',
+        'password',
+        'role',
+        'is_active',
+        'email_verified_at',
+        'last_login_at',
+        'banned_at',
+        'remember_token',
+    ];
+    
     protected $hidden = [
         'password',
         'remember_token',
     ];
-
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'last_login_at' => 'datetime',
+        'banned_at' => 'datetime',
+        'password' => 'hashed',
+        'is_active' => 'boolean',
+    ];
+    
+    // Relationships
+    public function datasets(): HasMany
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->hasMany(Dataset::class, 'user_id');
     }
-    public function savedDatasets(): BelongsToMany
-{
-    return $this->belongsToMany(
-        Dataset::class, 
-        'user_saved_datasets', 
-        'user_id', 
-        'dataset_id'
-    )->withTimestamps();
-}
+    
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class, 'user_id');
+    }
+    
+    public function downloads(): HasMany
+    {
+        return $this->hasMany(Download::class, 'user_id');
+    }
+    
+    // Helper methods
+    public function isAdmin(): bool
+    {
+        return in_array($this->role, ['admin', 'superadmin']);
+    }
+    
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'superadmin';
+    }
+    
+    public function isBanned(): bool
+    {
+        return $this->banned_at !== null;
+    }
+    
+    public function isActive(): bool
+    {
+        return $this->is_active && !$this->isBanned();
+    }
 }

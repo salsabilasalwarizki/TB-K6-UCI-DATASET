@@ -799,6 +799,18 @@ footer {
             <div class="collapse navbar-collapse" id="navbarNav">
                <!-- Navbar Navigation -->
 <ul class="navbar-nav me-auto">
+    @if(session('success'))
+<div class="alert alert-success alert-dismissible fade show m-3" role="alert">
+    <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+@endif
+@if(session('error'))
+<div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
+    <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+@endif
     @auth
     @if(auth()->user()->role === 'admin' || auth()->user()->role === 'superadmin')
         <li class="nav-item">
@@ -869,8 +881,16 @@ footer {
     </li>
 </ul>
                 <form class="d-flex search-form me-3" action="{{ route('datasets.index') }}" method="GET">
-                    <input class="form-control" type="search" name="q" placeholder="Search datasets..." value="{{ request('q') }}">
-                    <button class="btn" type="submit"><i class="bi bi-search"></i></button>
+                    <input 
+        class="form-control" 
+        type="search" 
+        name="q" 
+        placeholder="Search datasets..." 
+        value="{{ request('q') }}"
+        aria-label="Search datasets">
+    <button class="btn" type="submit" aria-label="Search">
+        <i class="bi bi-search"></i>
+    </button>
                 </form>
                 
                 @auth

@@ -1,6 +1,15 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\{
+    AdminDashboardController,
+    DashboardController,
+    AdminDatasetController,
+    AdminUserController,
+    DatasetReviewController,
+    UserManagementController,
+    StatisticsController
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -10,22 +19,35 @@ use Illuminate\Support\Facades\Route;
 | Tambahkan kembali hanya setelah file controller benar-benar dibuat.
 */
 
-Route::prefix('admin')
-     ->name('admin.')
-     ->middleware(['auth', 'admin'])
-     ->group(function () {
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     
-    // ✅ Dashboard pakai closure (tidak butuh controller file)
-    Route::get('/dashboard', function () {
-        return view('admin.dashboard');
-    })->name('dashboard');
-
-    /*
-    // 🔒 AREA AMAN UNTUK ROUTE MASA DEPAN
-    // Uncomment baris di bawah HANYA setelah kamu membuat file controller-nya:
+    // Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
-    // Route::prefix('users')->name('users.')->group(function () {
-    //     Route::get('/', [UserController::class, 'index'])->name('index');
-    // });
-    */
+    // Dataset Review
+    Route::prefix('datasets')->name('datasets.')->group(function () {
+        Route::get('/', [DatasetReviewController::class, 'index'])->name('index');
+        Route::get('/{dataset}', [DatasetReviewController::class, 'show'])->name('show');
+        Route::get('/{dataset}/review', [DatasetReviewController::class, 'show'])->name('review');
+        Route::post('/{dataset}/approve', [DatasetReviewController::class, 'approve'])->name('approve');
+        Route::post('/{dataset}/reject', [DatasetReviewController::class, 'reject'])->name('reject');
+        Route::post('/{dataset}/pending', [DatasetReviewController::class, 'setPending'])->name('pending');
+        Route::post('/bulk-approve', [DatasetReviewController::class, 'bulkApprove'])->name('bulk-approve');
+    });
+    
+    // User Management
+    Route::prefix('users')->name('users.')->group(function () {
+        Route::get('/', [UserManagementController::class, 'index'])->name('index');
+        Route::get('/{user}', [UserManagementController::class, 'show'])->name('show');
+        Route::put('/{user}/role', [UserManagementController::class, 'updateRole'])->name('update-role');
+        Route::post('/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('toggle-status');
+    });
+    
+    // Statistics
+    Route::get('/statistics', [StatisticsController::class, 'index'])->name('statistics');
+    
+    // Settings (optional)
+    Route::get('/settings', function() {
+        return view('admin.settings');
+    })->name('settings');
 });

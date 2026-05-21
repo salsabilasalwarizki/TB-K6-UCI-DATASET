@@ -17,14 +17,13 @@ class ImportPapersFromCsvSeeder extends Seeder
     public function __construct()
     {
         // Path ke folder CSV papers
-        $this->csvFolderPath = base_path('database/data/papers');
+        $this->csvFolderPath = database_path('data/papers');
     }
     
     public function run(): void
     {
         if (!is_dir($this->csvFolderPath)) {
             $this->command->error("❌ Folder tidak ditemukan: {$this->csvFolderPath}");
-            $this->command->info("💡 Buat folder: mkdir -p {$this->csvFolderPath}");
             return;
         }
         
@@ -52,6 +51,13 @@ class ImportPapersFromCsvSeeder extends Seeder
                     $filename = pathinfo($file, PATHINFO_FILENAME);
                     $this->command->info("📄 [" . ($index + 1) . "/{$total}] Processing: {$filename}");
                     
+                    // Cek ukuran file dulu
+                    if (filesize($file) === 0) {
+                        $this->command->warn("  ⏭️ Skipped (File Kosong): {$filename}");
+                        $skipped++;
+                        continue;
+                    }
+
                     $result = $this->importPaperFromCsv($file, $filename);
                     
                     if ($result === 'created') {
@@ -75,9 +81,8 @@ class ImportPapersFromCsvSeeder extends Seeder
                 [
                     ['Total Files', $total],
                     ['Papers Imported', $imported],
-                    ['Skipped (Already Exist)', $skipped],
+                    ['Skipped (Empty/Exists)', $skipped],
                     ['Errors', $errors],
-                    ['Success Rate', round(($imported / max($total, 1)) * 100, 2) . '%'],
                 ]
             );
             
@@ -88,54 +93,68 @@ class ImportPapersFromCsvSeeder extends Seeder
         }
     }
     
+    /**
+     * Import paper from single CSV file
+     */
     protected function importPaperFromCsv(string $filePath, string $datasetName): string
     {
         $csv = Reader::createFromPath($filePath, 'r');
         $csv->setDelimiter(',');
         $csv->setEnclosure('"');
         
-        // Cek apakah ada header di baris pertama
+        // Strategi 1: Coba baca dengan Header
         $csv->setHeaderOffset(0);
         $records = iterator_to_array((new Statement())->process($csv));
         
-        // Jika gagal baca header atau array kosong, coba baca sebagai raw rows
+        // Strategi 2: Jika kosong, coba baca tanpa Header (Raw Rows)
         if (empty($records)) {
-            $csv->setHeaderOffset(-1); // Hapus header mapping
-            $rawRows = iterator_to_array((new Statement())->process($csv));
-            
-            if (!empty($rawRows)) {
-                // Asumsikan baris pertama adalah data, mapping manual
-                $row = $rawRows[0] ?? [];
-                $data = [];
-                // Mapping manual berdasarkan urutan kolom umum: title, authors, venue, year, doi, url, abstract
-                $headers = ['title', 'authors', 'venue', 'year', 'doi', 'url', 'abstract'];
-                foreach ($headers as $i => $header) {
-                    $data[$header] = $row[$i] ?? null;
-                }
-            } else {
-                throw new \Exception("File CSV kosong atau tidak valid");
-            }
+            $csv->setHeaderOffset(-1);
+            $records = iterator_to_array((new Statement())->process($csv));
+        }
+        
+        // Validasi: Jika masih kosong, file tidak valid
+        if (empty($records)) {
+            throw new \Exception("File CSV kosong atau tidak memiliki data.");
+        }
+        
+        // Ambil baris pertama
+        $row = $records[0];
+        
+        // Normalisasi data (handling array associative vs numeric)
+        if (array_key_exists(0, $row)) {
+            // Jika array numerik (dari setHeaderOffset(-1))
+            // Asumsikan urutan kolom: Title, Authors, Venue, Year, DOI, URL, Abstract
+            $data = [
+                'title' => $row[0] ?? null,
+                'authors' => $row[1] ?? null,
+                'venue' => $row[2] ?? null,
+                'year' => $row[3] ?? null,
+                'doi' => $row[4] ?? null,
+                'url' => $row[5] ?? null,
+                'abstract' => $row[6] ?? null,
+            ];
         } else {
-            // Gunakan header otomatis
-            $row = $records[0];
+            // Jika array associative (dari setHeaderOffset(0))
             $data = array_change_key_case($row, CASE_LOWER);
         }
         
         // Extract data dengan fallback
-        $title = $this->clean($data['title'] ?? $data['paper_title'] ?? $data['name'] ?? null);
-        $authors = $this->clean($data['authors'] ?? $data['author'] ?? null);
-        $venue = $this->clean($data['venue'] ?? $data['journal'] ?? null);
-        $year = $this->parseYear($data['year'] ?? $data['publication_year'] ?? null);
-        $doi = $this->clean($data['doi'] ?? null);
-        $url = $this->clean($data['url'] ?? null);
-        $abstract = $this->clean($data['abstract'] ?? $data['description'] ?? null);
+        $paperData = [
+            'title' => $this->clean($data['title'] ?? $data['paper_title'] ?? null),
+            'authors' => $this->clean($data['authors'] ?? $data['author'] ?? null),
+            'venue' => $this->clean($data['venue'] ?? $data['journal'] ?? null),
+            'year' => $this->parseYear($data['year'] ?? $data['publication_year'] ?? null),
+            'doi' => $this->clean($data['doi'] ?? null),
+            'url' => $this->clean($data['url'] ?? null),
+            'abstract' => $this->clean($data['abstract'] ?? $data['description'] ?? null),
+        ];
         
         // Fallback title dari nama file jika kosong
-        if (empty($title)) {
-            $title = ucwords(str_replace(['-', '_', '+'], ' ', $datasetName));
+        if (empty($paperData['title'])) {
+            $paperData['title'] = ucwords(str_replace(['-', '_', '+'], ' ', $datasetName));
         }
         
-        if (empty($title)) {
+        if (empty($paperData['title'])) {
             throw new \Exception("Paper title is required");
         }
         
@@ -147,14 +166,14 @@ class ImportPapersFromCsvSeeder extends Seeder
         
         // Create/Find Paper
         $paper = Paper::firstOrCreate(
-            ['title' => $title, 'doi' => $doi],
+            ['title' => $paperData['title'], 'doi' => $paperData['doi']],
             [
-                'authors' => $authors,
-                'venue' => $venue,
-                'publication_year' => $year,
-                'url' => $url,
-                'abstract' => $abstract,
-                'bibtex' => $this->generateBibtex(['title' => $title, 'authors' => $authors, 'year' => $year, 'venue' => $venue, 'doi' => $doi, 'url' => $url]),
+                'authors' => $paperData['authors'],
+                'venue' => $paperData['venue'],
+                'publication_year' => $paperData['year'],
+                'url' => $paperData['url'],
+                'abstract' => $paperData['abstract'],
+                'bibtex' => $this->generateBibtex($paperData),
             ]
         );
         
@@ -190,19 +209,26 @@ class ImportPapersFromCsvSeeder extends Seeder
         return is_numeric($val) && strlen($val) === 4 ? (int)$val : null;
     }
     
+    // Menggunakan String Concatenation untuk menghindari error syntax Heredoc
     protected function generateBibtex(array $d): ?string
     {
         if (empty($d['title'])) return null;
+        
         $key = substr(Str::slug($d['title'], '-'), 0, 50);
-        return <<<BIBTEX
-@article{$key,
-  title = {{$d['title']}},
-  author = {$d['authors']},
-  year = {$d['year']},
-  journal = {$d['venue']},
-  doi = {$d['doi']},
-  url = {$d['url']}
-}
-BIBTEX;
+        $year = $d['year'] ?? date('Y');
+        $authors = $d['authors'] ?? 'Unknown';
+        $title = str_replace(['{', '}', '&'], ['\\{', '\\}', '\\&'], $d['title']);
+        $venue = $d['venue'] ?? 'Unknown';
+        $doi = $d['doi'] ?? '';
+        $url = $d['url'] ?? '';
+        
+        return "@article{$key},\n" .
+               "  title = {{$title}},\n" .
+               "  author = {{$authors}},\n" .
+               "  year = {{$year}},\n" .
+               "  journal = {{$venue}},\n" .
+               "  doi = {{$doi}},\n" .
+               "  url = {{$url}}\n" .
+               "}\n";
     }
 }

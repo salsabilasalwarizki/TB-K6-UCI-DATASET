@@ -163,11 +163,21 @@ public function contributors(): BelongsToMany
     
     // === ACCESSORS ===
     
-    public function getUrlAttribute(): string
-    {
-        return route('datasets.show', [$this, $this->slug]);
+// app/Models/Dataset.php
+
+/**
+ * Accessor untuk mendapatkan URL lengkap dataset
+ */
+public function getUrlAttribute(): string
+{
+    // Cek apakah dataset sudah punya ID (sudah tersimpan di database)
+    if (empty($this->dataset_id)) {
+        return ''; // Kembalikan string kosong jika ID belum ada
     }
-    
+
+    // Gunakan array eksplisit ['dataset' => ...] untuk memastikan parameter terpenuhi
+    return route('datasets.show', ['dataset' => $this->dataset_id]);
+}
     public function getThumbnailAttribute(): ?string
     {
         if ($this->thumbnail_url) return $this->thumbnail_url;

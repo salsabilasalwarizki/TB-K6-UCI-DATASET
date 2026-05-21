@@ -228,7 +228,19 @@
                     </div>
                 </div>
             </aside>
-            
+            <!-- Tambahkan di atas datasets container -->
+@if(request('q'))
+<div class="alert alert-info d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <i class="bi bi-search me-2"></i>
+        <strong>Search results for:</strong> "{{ request('q') }}"
+        <span class="text-muted ms-2">({{ $datasets->total() }} found)</span>
+    </div>
+    <a href="{{ route('datasets.index') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-x-circle me-1"></i>Clear Search
+    </a>
+</div>
+@endif
             <!-- Main Content -->
             <main class="col-lg-9 col-md-8">
                 
@@ -520,6 +532,12 @@
                         @else
                             <li class="page-item"><a class="page-link" href="{{ $datasets->previousPageUrl() }}" rel="prev">‹</a></li>
                         @endif
+                        <!-- Pagination Section -->
+@if($datasets->hasPages())
+<div class="mt-4 d-flex justify-content-center">
+    {{ $datasets->appends(request()->query())->links() }}
+</div>
+@endif
                         
                         {{-- Pagination Elements --}}
                         @foreach ($datasets->getUrlRange(1, $datasets->lastPage()) as $page => $url)
