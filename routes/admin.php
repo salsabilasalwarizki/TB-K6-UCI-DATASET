@@ -2,7 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\{
+    AdminDashboardController,
     DashboardController,
+    AdminDatasetController,
+    AdminUserController,
     DatasetReviewController,
     UserManagementController,
     StatisticsController
@@ -18,35 +21,36 @@ use App\Http\Controllers\Admin\{
 |
 */
 
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+// Admin Routes
+Route::middleware(['auth', 'role:admin,superadmin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     
-    // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // Datasets CRUD
+    Route::resource('datasets', AdminDatasetController::class)->except(['show']);
+    Route::post('datasets/{dataset}/approve', [AdminDatasetController::class, 'approve'])->name('datasets.approve');
+    Route::post('datasets/{dataset}/reject', [AdminDatasetController::class, 'reject'])->name('datasets.reject');
+    Route::post('datasets/bulk-action', [AdminDatasetController::class, 'bulkAction'])->name('datasets.bulk-action');
+    Route::get('datasets/export', [AdminDatasetController::class, 'export'])->name('datasets.export');
     
-    // Dataset Review
-    Route::prefix('datasets')->name('datasets.')->group(function () {
-        Route::get('/', [DatasetReviewController::class, 'index'])->name('index');
-        Route::get('/{dataset}', [DatasetReviewController::class, 'show'])->name('show');
-        Route::get('/{dataset}/review', [DatasetReviewController::class, 'show'])->name('review');
-        Route::post('/{dataset}/approve', [DatasetReviewController::class, 'approve'])->name('approve');
-        Route::post('/{dataset}/reject', [DatasetReviewController::class, 'reject'])->name('reject');
-        Route::post('/{dataset}/pending', [DatasetReviewController::class, 'setPending'])->name('pending');
-        Route::post('/bulk-approve', [DatasetReviewController::class, 'bulkApprove'])->name('bulk-approve');
-    });
+    // Users CRUD
+    Route::resource('users', AdminUserController::class)->except(['show']);
+    Route::post('users/{user}/toggle-ban', [AdminUserController::class, 'toggleBan'])->name('users.toggle-ban');
+    Route::post('users/bulk-action', [AdminUserController::class, 'bulkAction'])->name('users.bulk-action');
+    Route::get('users/export', [AdminUserController::class, 'export'])->name('users.export');
+
+    // Admin Statistics Route
+Route::get('/statistics', function() {
+    // Statistics data
+    $stats = [
+        'total_datasets' => \App\Models\Dataset::count(),
+        'total_users' => \App\Models\User::count(),
+        'total_papers' => \App\Models\Paper::count(),
+        'pending_datasets' => \App\Models\Dataset::where('status', 'pending')->count(),
+        'approved_datasets' => \App\Models\Dataset::where('status', 'approved')->count(),
+    ];
     
-    // User Management
-    Route::prefix('users')->name('users.')->group(function () {
-        Route::get('/', [UserManagementController::class, 'index'])->name('index');
-        Route::get('/{user}', [UserManagementController::class, 'show'])->name('show');
-        Route::put('/{user}/role', [UserManagementController::class, 'updateRole'])->name('update-role');
-        Route::post('/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('toggle-status');
-    });
-    
-    // Statistics
-    Route::get('/statistics', [StatisticsController::class, 'index'])->name('statistics');
-    
-    // Settings (optional)
-    Route::get('/settings', function() {
-        return view('admin.settings');
-    })->name('settings');
+    return view('admin.statistics', compact('stats'));
+})->name('admin.statistics');
+// Statistics Route
+Route::get('/statistics', [StatisticsController::class, 'index'])->name('statistics');
 });
