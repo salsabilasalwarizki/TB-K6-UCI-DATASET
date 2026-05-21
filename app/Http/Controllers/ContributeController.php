@@ -493,7 +493,8 @@ if (!empty($data['files']) && is_array($data['files'])) {
         return redirect()->route('profile.datasets')->with('success', 'External link submitted!');
     }
     
-    public function createLinkingMetadata() { return view('linking.metadata'); }
+    public function createLinkingMetadata() { 
+        return view('linking.metadata'); }
     
     public function storeLinkingMetadata(Request $request) {
         $validated = $request->validate([
@@ -517,6 +518,7 @@ if (!empty($data['files']) && is_array($data['files'])) {
     
     public function createLinkingPaper() {
         if (!Session::has('linking_data')) return redirect()->route('contribute.linking.metadata')->with('error', 'Fill metadata first.');
+        $oldPaper = Session::get('linking_data.paper', []);
         return view('linking.paper', compact('oldPaper'));
     }
     
