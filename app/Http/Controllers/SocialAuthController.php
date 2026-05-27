@@ -73,6 +73,6 @@ class SocialAuthController extends Controller
     session()->regenerate(); // ← Pastikan ini ada!
     
     // Redirect ke profile atau home, bukan langsung ke admin
-    return redirect()->intended('/profile');
+    return redirect()->intended('/home');
     }
 }

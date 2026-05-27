@@ -107,70 +107,70 @@
                 <?php endif; ?>
             </div>
 
-<!-- Dataset Information Section -->
-<?php if($dataset->descriptionDetails): ?>  
-<div class="card mb-4">
-    <div class="card-header bg-light">
-        <h5 class="mb-0">
-            <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#datasetInfo">
-                Dataset Information <i class="bi bi-chevron-down ms-1"></i>
-            </button>
-        </h5>
-    </div>
-    <div id="datasetInfo" class="collapse show">
-        <div class="card-body">
-            
-            <?php if($dataset->descriptionDetails->instances_represent): ?>
-            <div class="mb-3">
-                <h6 class="fw-bold">What do the instances represent?</h6>
-                <p><?php echo e($dataset->descriptionDetails->instances_represent); ?></p>
+            <!-- Dataset Information Section -->
+            <?php if($dataset->descriptionDetails): ?>
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#datasetInfo">
+                            Dataset Information <i class="bi bi-chevron-down ms-1"></i>
+                        </button>
+                    </h5>
+                </div>
+                <div id="datasetInfo" class="collapse show">
+                    <div class="card-body">
+                        
+                        <?php if($dataset->descriptionDetails->instances_represent): ?>
+                        <div class="mb-3">
+                            <h6 class="fw-bold">What do the instances represent?</h6>
+                            <p><?php echo e($dataset->descriptionDetails->instances_represent); ?></p>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if($dataset->descriptionDetails->purpose): ?>
+                        <div class="mb-3">
+                            <h6 class="fw-bold">Purpose</h6>
+                            <p><?php echo e($dataset->descriptionDetails->purpose); ?></p>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if($dataset->descriptionDetails->funding): ?>
+                        <div class="mb-3">
+                            <h6 class="fw-bold">Funding</h6>
+                            <p><?php echo e($dataset->descriptionDetails->funding); ?></p>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <div class="mb-3">
+                            <h6 class="fw-bold">Has Missing Values?</h6>
+                            <p><?php echo e($dataset->has_missing_values ? 'Yes' : 'No'); ?></p>
+                        </div>
+                        
+                        <?php if($dataset->descriptionDetails->data_splits): ?>
+                        <div class="mb-3">
+                            <h6 class="fw-bold">Recommended Data Splits</h6>
+                            <p><?php echo e($dataset->descriptionDetails->data_splits); ?></p>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if($dataset->descriptionDetails->sensitive_data): ?>
+                        <div class="mb-3">
+                            <h6 class="fw-bold">Sensitive Data</h6>
+                            <p><?php echo e($dataset->descriptionDetails->sensitive_data); ?></p>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if($dataset->descriptionDetails->additional_info): ?>
+                        <div class="mb-3">
+                            <h6 class="fw-bold">Additional Information</h6>
+                            <p><?php echo e($dataset->descriptionDetails->additional_info); ?></p>
+                        </div>
+                        <?php endif; ?>
+                        
+                    </div>
+                </div>
             </div>
             <?php endif; ?>
-            
-            <?php if($dataset->descriptionDetails->purpose): ?>
-            <div class="mb-3">
-                <h6 class="fw-bold">Purpose</h6>
-                <p><?php echo e($dataset->descriptionDetails->purpose); ?></p>
-            </div>
-            <?php endif; ?>
-            
-            <?php if($dataset->descriptionDetails->funding): ?>
-            <div class="mb-3">
-                <h6 class="fw-bold">Funding</h6>
-                <p><?php echo e($dataset->descriptionDetails->funding); ?></p>
-            </div>
-            <?php endif; ?>
-            
-            <div class="mb-3">
-                <h6 class="fw-bold">Has Missing Values?</h6>
-                <p><?php echo e($dataset->has_missing_values ? 'Yes' : 'No'); ?></p>
-            </div>
-            
-            <?php if($dataset->descriptionDetails->data_splits): ?>
-            <div class="mb-3">
-                <h6 class="fw-bold">Recommended Data Splits</h6>
-                <p><?php echo e($dataset->descriptionDetails->data_splits); ?></p>
-            </div>
-            <?php endif; ?>
-            
-            <?php if($dataset->descriptionDetails->sensitive_data): ?>
-            <div class="mb-3">
-                <h6 class="fw-bold">Sensitive Data</h6>
-                <p><?php echo e($dataset->descriptionDetails->sensitive_data); ?></p>
-            </div>
-            <?php endif; ?>
-            
-            <?php if($dataset->descriptionDetails->additional_info): ?>
-            <div class="mb-3">
-                <h6 class="fw-bold">Additional Information</h6>
-                <p><?php echo e($dataset->descriptionDetails->additional_info); ?></p>
-            </div>
-            <?php endif; ?>
-            
-        </div>
-    </div>
-</div>
-<?php endif; ?>
 
             <!-- Variables Table -->
             <?php if($dataset->variables->isNotEmpty()): ?>
@@ -316,21 +316,36 @@
             </div>
             <?php endif; ?>
 
-            <!-- Papers Citing this Dataset -->
+            <!-- Papers Citing this Dataset (FIXED) -->
             <?php
-                $citingPapers = $dataset->papers->where('pivot.citation_type', 'citing')->sortByDesc('publication_year');
+                    $citingPapers = $dataset->papers->where(function($paper) {
+        return $paper->pivot->citation_type === 'citing' || $paper->pivot->citation_type === null;
+    })->sortByDesc('publication_year');
+                $papersPerPage = request('per_page', 5);
+                $currentPage = request('page', 1);
+                $totalPapers = $citingPapers->count();
+                $startIndex = ($currentPage - 1) * $papersPerPage;
+                $endIndex = min($startIndex + $papersPerPage, $totalPapers);
+                $paginatedPapers = $citingPapers->slice($startIndex, $papersPerPage);
+                $totalPages = ceil($totalPapers / $papersPerPage);
             ?>
+            
             <div class="card mb-4">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Papers Citing this Dataset (<?php echo e($citingPapers->count()); ?>)</h5>
-                    <button class="btn btn-sm btn-primary" onclick="sortPapers()">
-                        <i class="bi bi-funnel me-1"></i>SORT BY YEAR, DESC
-                    </button>
+                    <h5 class="mb-0">Papers Citing this Dataset (<?php echo e($totalPapers); ?>)</h5>
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" style="width: auto;" id="sortByYear" onchange="sortPapers()">
+                            <option value="year_desc" <?php echo e(request('sort') === 'year_desc' || !request('sort') ? 'selected' : ''); ?>>Year (Newest)</option>
+                            <option value="year_asc" <?php echo e(request('sort') === 'year_asc' ? 'selected' : ''); ?>>Year (Oldest)</option>
+                            <option value="title_asc" <?php echo e(request('sort') === 'title_asc' ? 'selected' : ''); ?>>Title (A-Z)</option>
+                            <option value="title_desc" <?php echo e(request('sort') === 'title_desc' ? 'selected' : ''); ?>>Title (Z-A)</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <?php if($citingPapers->isNotEmpty()): ?>
+                    <?php if($paginatedPapers->isNotEmpty()): ?>
                     <div class="list-group" id="papersList">
-                        <?php $__currentLoopData = $citingPapers->take(5); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $paper): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <?php $__currentLoopData = $paginatedPapers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $paper): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                         <div class="list-group-item list-group-item-action">
                             <?php if($paper->url): ?>
                             <h6>
@@ -347,30 +362,52 @@
                             <?php if($paper->doi): ?>
                             <p class="mb-0 small text-primary">DOI: <?php echo e($paper->doi); ?></p>
                             <?php endif; ?>
+                            <?php if($paper->abstract): ?>
+                            <p class="mt-2 small text-muted"><?php echo e(Str::limit($paper->abstract, 150)); ?></p>
+                            <?php endif; ?>
                         </div>
                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </div>
                     
-                    <!-- Pagination -->
-                    <div class="mt-3 d-flex justify-content-between align-items-center">
+                    <!-- Pagination Controls -->
+                    <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <div class="d-flex align-items-center gap-2">
                             <span class="small text-muted">Rows per page:</span>
                             <select class="form-select form-select-sm" style="width: auto;" onchange="changePageSize(this.value)">
-                                <option value="5" <?php echo e($citingPapers->count() <= 5 ? 'selected' : ''); ?>>5</option>
-                                <option value="10" <?php echo e($citingPapers->count() > 5 && $citingPapers->count() <= 10 ? 'selected' : ''); ?>>10</option>
-                                <option value="20">20</option>
+                                <option value="5" <?php echo e($papersPerPage == 5 ? 'selected' : ''); ?>>5</option>
+                                <option value="10" <?php echo e($papersPerPage == 10 ? 'selected' : ''); ?>>10</option>
+                                <option value="20" <?php echo e($papersPerPage == 20 ? 'selected' : ''); ?>>20</option>
+                                <option value="50" <?php echo e($papersPerPage == 50 ? 'selected' : ''); ?>>50</option>
                             </select>
-                            <span class="small text-muted">0 to <?php echo e(min(5, $citingPapers->count())); ?> of <?php echo e($citingPapers->count()); ?></span>
+                            <span class="small text-muted">
+                                <?php echo e($totalPapers > 0 ? $startIndex + 1 : 0); ?> to <?php echo e($endIndex); ?> of <?php echo e($totalPapers); ?>
+
+                            </span>
                         </div>
+                        
+                        <?php if($totalPages > 1): ?>
                         <nav>
                             <ul class="pagination pagination-sm mb-0">
-                                <li class="page-item disabled"><a class="page-link" href="#">‹</a></li>
-                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                                <?php if($citingPapers->count() > 5): ?>
-                                <li class="page-item"><a class="page-link" href="#">›</a></li>
-                                <?php endif; ?>
+                                <li class="page-item <?php echo e($currentPage <= 1 ? 'disabled' : ''); ?>">
+                                    <a class="page-link" href="?page=<?php echo e($currentPage - 1); ?>&per_page=<?php echo e($papersPerPage); ?>&sort=<?php echo e(request('sort', 'year_desc')); ?>">‹</a>
+                                </li>
+                                
+                                <?php for($i = 1; $i <= $totalPages; $i++): ?>
+                                    <?php if($i == 1 || $i == $totalPages || ($i >= $currentPage - 2 && $i <= $currentPage + 2)): ?>
+                                        <li class="page-item <?php echo e($i == $currentPage ? 'active' : ''); ?>">
+                                            <a class="page-link" href="?page=<?php echo e($i); ?>&per_page=<?php echo e($papersPerPage); ?>&sort=<?php echo e(request('sort', 'year_desc')); ?>"><?php echo e($i); ?></a>
+                                        </li>
+                                    <?php elseif($i == $currentPage - 3 || $i == $currentPage + 3): ?>
+                                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                                    <?php endif; ?>
+                                <?php endfor; ?>
+                                
+                                <li class="page-item <?php echo e($currentPage >= $totalPages ? 'disabled' : ''); ?>">
+                                    <a class="page-link" href="?page=<?php echo e($currentPage + 1); ?>&per_page=<?php echo e($papersPerPage); ?>&sort=<?php echo e(request('sort', 'year_desc')); ?>">›</a>
+                                </li>
                             </ul>
                         </nav>
+                        <?php endif; ?>
                     </div>
                     <?php else: ?>
                     <p class="text-muted mb-0">No papers citing this dataset yet.</p>
@@ -799,28 +836,24 @@ print(df.describe())`;
     });
 }
 
+// Sorting papers
 function sortPapers() {
-    // Implement sorting functionality
-    alert('Sorting papers by year (descending)');
+    const sortBy = document.getElementById('sortByYear').value;
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('sort', sortBy);
+    urlParams.set('page', '1'); // Reset to first page when sorting
+    window.location.search = urlParams.toString();
 }
 
+// Change page size
 function changePageSize(size) {
-    // Implement pagination functionality
-    console.log('Changing page size to:', size);
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('per_page', size);
+    urlParams.set('page', '1'); // Reset to first page
+    window.location.search = urlParams.toString();
 }
 
 // Track dataset view
-document.addEventListener('DOMContentLoaded', function() {
-    // Send view tracking request
-    fetch('<?php echo e(route('datasets.track-view', $dataset)); ?>', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
-        }
-    }).catch(err => console.error('Tracking error:', err));
-});
-// Track dataset view (with CSRF token)
 document.addEventListener('DOMContentLoaded', function() {
     const datasetId = <?php echo e($dataset->dataset_id); ?>;
     const trackUrl = "<?php echo e(route('datasets.track-view', $dataset)); ?>";
@@ -890,7 +923,6 @@ function addToCollection(datasetId) {
         }
     });
 }
-</script>
 </script>
 <?php $__env->stopPush(); ?>
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Downloads\tesdataset-app (4)\tesdataset-app (3)\TB-K6-UCI-DATASET\resources\views/datasets/show.blade.php ENDPATH**/ ?>

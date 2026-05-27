@@ -580,7 +580,7 @@
     
     <!-- About Us Dropdown -->
     <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" id="aboutDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <a class="nav-link dropdown-toggle" href="{{ route('about.who-we-are') }}" id="aboutDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             About Us
         </a>
         <ul class="dropdown-menu" aria-labelledby="aboutDropdown">
@@ -683,7 +683,7 @@
                 <div class="col-lg-2 col-md-4 col-6 mb-4 mb-lg-0">
                     <h5 class="footer-section-title">THE PROJECT</h5>
                     <ul class="footer-links">
-                        <li><a href="{{ route('about') }}">About Us</a></li>
+                        <li><a href="{{ route('about.who-we-are') }}">About Us</a></li>
                         <li><a href="#">CML</a></li>
                         <li><a href="#">National Science Foundation</a></li>
                     </ul>

@@ -106,70 +106,70 @@
                 @endif
             </div>
 
-<!-- Dataset Information Section -->
-@if($dataset->descriptionDetails)  {{-- ← FIX: singular, nama relationship --}}
-<div class="card mb-4">
-    <div class="card-header bg-light">
-        <h5 class="mb-0">
-            <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#datasetInfo">
-                Dataset Information <i class="bi bi-chevron-down ms-1"></i>
-            </button>
-        </h5>
-    </div>
-    <div id="datasetInfo" class="collapse show">
-        <div class="card-body">
-            
-            @if($dataset->descriptionDetails->instances_represent)
-            <div class="mb-3">
-                <h6 class="fw-bold">What do the instances represent?</h6>
-                <p>{{ $dataset->descriptionDetails->instances_represent }}</p>
+            <!-- Dataset Information Section -->
+            @if($dataset->descriptionDetails)
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#datasetInfo">
+                            Dataset Information <i class="bi bi-chevron-down ms-1"></i>
+                        </button>
+                    </h5>
+                </div>
+                <div id="datasetInfo" class="collapse show">
+                    <div class="card-body">
+                        
+                        @if($dataset->descriptionDetails->instances_represent)
+                        <div class="mb-3">
+                            <h6 class="fw-bold">What do the instances represent?</h6>
+                            <p>{{ $dataset->descriptionDetails->instances_represent }}</p>
+                        </div>
+                        @endif
+                        
+                        @if($dataset->descriptionDetails->purpose)
+                        <div class="mb-3">
+                            <h6 class="fw-bold">Purpose</h6>
+                            <p>{{ $dataset->descriptionDetails->purpose }}</p>
+                        </div>
+                        @endif
+                        
+                        @if($dataset->descriptionDetails->funding)
+                        <div class="mb-3">
+                            <h6 class="fw-bold">Funding</h6>
+                            <p>{{ $dataset->descriptionDetails->funding }}</p>
+                        </div>
+                        @endif
+                        
+                        <div class="mb-3">
+                            <h6 class="fw-bold">Has Missing Values?</h6>
+                            <p>{{ $dataset->has_missing_values ? 'Yes' : 'No' }}</p>
+                        </div>
+                        
+                        @if($dataset->descriptionDetails->data_splits)
+                        <div class="mb-3">
+                            <h6 class="fw-bold">Recommended Data Splits</h6>
+                            <p>{{ $dataset->descriptionDetails->data_splits }}</p>
+                        </div>
+                        @endif
+                        
+                        @if($dataset->descriptionDetails->sensitive_data)
+                        <div class="mb-3">
+                            <h6 class="fw-bold">Sensitive Data</h6>
+                            <p>{{ $dataset->descriptionDetails->sensitive_data }}</p>
+                        </div>
+                        @endif
+                        
+                        @if($dataset->descriptionDetails->additional_info)
+                        <div class="mb-3">
+                            <h6 class="fw-bold">Additional Information</h6>
+                            <p>{{ $dataset->descriptionDetails->additional_info }}</p>
+                        </div>
+                        @endif
+                        
+                    </div>
+                </div>
             </div>
             @endif
-            
-            @if($dataset->descriptionDetails->purpose)
-            <div class="mb-3">
-                <h6 class="fw-bold">Purpose</h6>
-                <p>{{ $dataset->descriptionDetails->purpose }}</p>
-            </div>
-            @endif
-            
-            @if($dataset->descriptionDetails->funding)
-            <div class="mb-3">
-                <h6 class="fw-bold">Funding</h6>
-                <p>{{ $dataset->descriptionDetails->funding }}</p>
-            </div>
-            @endif
-            
-            <div class="mb-3">
-                <h6 class="fw-bold">Has Missing Values?</h6>
-                <p>{{ $dataset->has_missing_values ? 'Yes' : 'No' }}</p>
-            </div>
-            
-            @if($dataset->descriptionDetails->data_splits)
-            <div class="mb-3">
-                <h6 class="fw-bold">Recommended Data Splits</h6>
-                <p>{{ $dataset->descriptionDetails->data_splits }}</p>
-            </div>
-            @endif
-            
-            @if($dataset->descriptionDetails->sensitive_data)
-            <div class="mb-3">
-                <h6 class="fw-bold">Sensitive Data</h6>
-                <p>{{ $dataset->descriptionDetails->sensitive_data }}</p>
-            </div>
-            @endif
-            
-            @if($dataset->descriptionDetails->additional_info)
-            <div class="mb-3">
-                <h6 class="fw-bold">Additional Information</h6>
-                <p>{{ $dataset->descriptionDetails->additional_info }}</p>
-            </div>
-            @endif
-            
-        </div>
-    </div>
-</div>
-@endif
 
             <!-- Variables Table -->
             @if($dataset->variables->isNotEmpty())
@@ -314,21 +314,36 @@
             </div>
             @endif
 
-            <!-- Papers Citing this Dataset -->
+            <!-- Papers Citing this Dataset (FIXED) -->
             @php
-                $citingPapers = $dataset->papers->where('pivot.citation_type', 'citing')->sortByDesc('publication_year');
+                    $citingPapers = $dataset->papers->where(function($paper) {
+        return $paper->pivot->citation_type === 'citing' || $paper->pivot->citation_type === null;
+    })->sortByDesc('publication_year');
+                $papersPerPage = request('per_page', 5);
+                $currentPage = request('page', 1);
+                $totalPapers = $citingPapers->count();
+                $startIndex = ($currentPage - 1) * $papersPerPage;
+                $endIndex = min($startIndex + $papersPerPage, $totalPapers);
+                $paginatedPapers = $citingPapers->slice($startIndex, $papersPerPage);
+                $totalPages = ceil($totalPapers / $papersPerPage);
             @endphp
+            
             <div class="card mb-4">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Papers Citing this Dataset ({{ $citingPapers->count() }})</h5>
-                    <button class="btn btn-sm btn-primary" onclick="sortPapers()">
-                        <i class="bi bi-funnel me-1"></i>SORT BY YEAR, DESC
-                    </button>
+                    <h5 class="mb-0">Papers Citing this Dataset ({{ $totalPapers }})</h5>
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" style="width: auto;" id="sortByYear" onchange="sortPapers()">
+                            <option value="year_desc" {{ request('sort') === 'year_desc' || !request('sort') ? 'selected' : '' }}>Year (Newest)</option>
+                            <option value="year_asc" {{ request('sort') === 'year_asc' ? 'selected' : '' }}>Year (Oldest)</option>
+                            <option value="title_asc" {{ request('sort') === 'title_asc' ? 'selected' : '' }}>Title (A-Z)</option>
+                            <option value="title_desc" {{ request('sort') === 'title_desc' ? 'selected' : '' }}>Title (Z-A)</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="card-body">
-                    @if($citingPapers->isNotEmpty())
+                    @if($paginatedPapers->isNotEmpty())
                     <div class="list-group" id="papersList">
-                        @foreach($citingPapers->take(5) as $paper)
+                        @foreach($paginatedPapers as $paper)
                         <div class="list-group-item list-group-item-action">
                             @if($paper->url)
                             <h6>
@@ -344,30 +359,51 @@
                             @if($paper->doi)
                             <p class="mb-0 small text-primary">DOI: {{ $paper->doi }}</p>
                             @endif
+                            @if($paper->abstract)
+                            <p class="mt-2 small text-muted">{{ Str::limit($paper->abstract, 150) }}</p>
+                            @endif
                         </div>
                         @endforeach
                     </div>
                     
-                    <!-- Pagination -->
-                    <div class="mt-3 d-flex justify-content-between align-items-center">
+                    <!-- Pagination Controls -->
+                    <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <div class="d-flex align-items-center gap-2">
                             <span class="small text-muted">Rows per page:</span>
                             <select class="form-select form-select-sm" style="width: auto;" onchange="changePageSize(this.value)">
-                                <option value="5" {{ $citingPapers->count() <= 5 ? 'selected' : '' }}>5</option>
-                                <option value="10" {{ $citingPapers->count() > 5 && $citingPapers->count() <= 10 ? 'selected' : '' }}>10</option>
-                                <option value="20">20</option>
+                                <option value="5" {{ $papersPerPage == 5 ? 'selected' : '' }}>5</option>
+                                <option value="10" {{ $papersPerPage == 10 ? 'selected' : '' }}>10</option>
+                                <option value="20" {{ $papersPerPage == 20 ? 'selected' : '' }}>20</option>
+                                <option value="50" {{ $papersPerPage == 50 ? 'selected' : '' }}>50</option>
                             </select>
-                            <span class="small text-muted">0 to {{ min(5, $citingPapers->count()) }} of {{ $citingPapers->count() }}</span>
+                            <span class="small text-muted">
+                                {{ $totalPapers > 0 ? $startIndex + 1 : 0 }} to {{ $endIndex }} of {{ $totalPapers }}
+                            </span>
                         </div>
+                        
+                        @if($totalPages > 1)
                         <nav>
                             <ul class="pagination pagination-sm mb-0">
-                                <li class="page-item disabled"><a class="page-link" href="#">‹</a></li>
-                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                                @if($citingPapers->count() > 5)
-                                <li class="page-item"><a class="page-link" href="#">›</a></li>
-                                @endif
+                                <li class="page-item {{ $currentPage <= 1 ? 'disabled' : '' }}">
+                                    <a class="page-link" href="?page={{ $currentPage - 1 }}&per_page={{ $papersPerPage }}&sort={{ request('sort', 'year_desc') }}">‹</a>
+                                </li>
+                                
+                                @for($i = 1; $i <= $totalPages; $i++)
+                                    @if($i == 1 || $i == $totalPages || ($i >= $currentPage - 2 && $i <= $currentPage + 2))
+                                        <li class="page-item {{ $i == $currentPage ? 'active' : '' }}">
+                                            <a class="page-link" href="?page={{ $i }}&per_page={{ $papersPerPage }}&sort={{ request('sort', 'year_desc') }}">{{ $i }}</a>
+                                        </li>
+                                    @elseif($i == $currentPage - 3 || $i == $currentPage + 3)
+                                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                                    @endif
+                                @endfor
+                                
+                                <li class="page-item {{ $currentPage >= $totalPages ? 'disabled' : '' }}">
+                                    <a class="page-link" href="?page={{ $currentPage + 1 }}&per_page={{ $papersPerPage }}&sort={{ request('sort', 'year_desc') }}">›</a>
+                                </li>
                             </ul>
                         </nav>
+                        @endif
                     </div>
                     @else
                     <p class="text-muted mb-0">No papers citing this dataset yet.</p>
@@ -788,28 +824,24 @@ print(df.describe())`;
     });
 }
 
+// Sorting papers
 function sortPapers() {
-    // Implement sorting functionality
-    alert('Sorting papers by year (descending)');
+    const sortBy = document.getElementById('sortByYear').value;
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('sort', sortBy);
+    urlParams.set('page', '1'); // Reset to first page when sorting
+    window.location.search = urlParams.toString();
 }
 
+// Change page size
 function changePageSize(size) {
-    // Implement pagination functionality
-    console.log('Changing page size to:', size);
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('per_page', size);
+    urlParams.set('page', '1'); // Reset to first page
+    window.location.search = urlParams.toString();
 }
 
 // Track dataset view
-document.addEventListener('DOMContentLoaded', function() {
-    // Send view tracking request
-    fetch('{{ route('datasets.track-view', $dataset) }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        }
-    }).catch(err => console.error('Tracking error:', err));
-});
-// Track dataset view (with CSRF token)
 document.addEventListener('DOMContentLoaded', function() {
     const datasetId = {{ $dataset->dataset_id }};
     const trackUrl = "{{ route('datasets.track-view', $dataset) }}";
@@ -879,6 +911,5 @@ function addToCollection(datasetId) {
         }
     });
 }
-</script>
 </script>
 @endpush

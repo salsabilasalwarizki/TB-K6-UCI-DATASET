@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\{
     UserManagementController,
     StatisticsController
 };
+use App\Http\Middleware\RoleMiddleware;
 
 /*
 |--------------------------------------------------------------------------

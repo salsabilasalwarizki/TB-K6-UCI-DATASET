@@ -25,6 +25,14 @@ class DatasetController extends Controller
         $variableTypes = $request->get('variable_types', []);
         $hasMissing = $request->boolean('has_missing');
         $statuses = $request->get('status', ['available']);
+        // Search
+        if ($request->filled('search')) {
+            $query->where(function($q) use ($request) {
+                $q->where('name', 'like', "%{$request->search}%")
+                  ->orWhere('subject_area', 'like', "%{$request->search}%")
+                  ->orWhere('domain', 'like', "%{$request->search}%");
+            });
+        }
         
         // Range filters
         $instancesMin = $request->get('instances_min');
@@ -87,10 +95,10 @@ $dataset->load([
     'variables.categories',
     'keywords',
     
-    // ❌ HAPUS atau FIX ini:
+    // HAPUS 
     // 'papers' => fn($q) => $q->orderBy('pivot.is_primary', 'desc'),
     
-    // ✅ BENAR - Biarkan Model handle ordering, atau gunakan orderByPivot:
+   //orderByPivot:
     'papers' => fn($q) => $q->orderByPivot('is_primary', 'desc'),
     
     'contributors' => fn($q) => $q->orderByPivot('display_order'),
@@ -106,21 +114,42 @@ $dataset->load([
     /**
      * Download dataset file
      */
-    public function download(Request $request, Dataset $dataset, File $file)
-    {
-        // Verify file belongs to dataset
-        $pivot = $dataset->files()->where('file_id', $file->file_id)->first();
-        abort_unless($pivot, 404);
-        
-        // Track download
-        $dataset->incrementDownload($file, $request->user());
-        
-        // Serve file
-        $path = storage_path('app/public/' . $file->file_path);
-        abort_unless(file_exists($path), 404);
-        
-        return response()->download($path, $file->original_filename ?? $file->filename);
+    // app/Http/Controllers/DatasetController.php
+
+public function download($datasetId, $fileId)
+{
+    // Cari file di database
+    $datasetFile = \DB::table('dataset_files')
+        ->join('files', 'dataset_files.file_id', '=', 'files.file_id')
+        ->where('dataset_files.dataset_id', $datasetId)
+        ->where('files.file_id', $fileId)
+        ->first();
+
+    if (!$datasetFile) {
+        abort(404, 'File not found');
     }
+
+    // Path file di storage
+    $filePath = storage_path('app/public/' . $datasetFile->file_path);
+
+    // Cek apakah file ada
+    if (!file_exists($filePath)) {
+        abort(404, 'File tidak ditemukan di server');
+    }
+
+    // Catat download (opsional)
+    \DB::table('downloads')->insert([
+        'dataset_id' => $datasetId,
+        'file_id' => $fileId,
+        'user_id' => auth()->id(),
+        'downloaded_at' => now(),
+        'ip_address' => request()->ip(),
+        'user_agent' => request()->userAgent()
+    ]);
+
+    // Return file sebagai download
+    return response()->download($filePath, $datasetFile->original_filename);
+}
     
     /**
      * Track dataset view (AJAX endpoint)
@@ -134,9 +163,7 @@ $dataset->load([
         if (!$request->session()->has($sessionKey)) {
             $dataset->increment('view_count');
             $request->session()->put($sessionKey, true);
-            
-            // Optional: Log to analytics service
-            // event(new DatasetViewed($dataset, $request->ip()));
+       ;
         }
         
         return response()->json(['success' => true, 'views' => $dataset->view_count]);
